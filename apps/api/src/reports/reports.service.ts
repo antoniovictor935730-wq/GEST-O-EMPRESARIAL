@@ -1,5 +1,15 @@
 import { Injectable } from '@nestjs/common'
+import type { Prisma } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
+
+type ReportSale = Prisma.SaleGetPayload<{}>
+type ReportSaleWithClient = Prisma.SaleGetPayload<{ include: { client: true } }>
+type ReportExpense = Prisma.ExpenseGetPayload<object>
+type ReportRevenue = Prisma.RevenueGetPayload<object>
+type NormalizedReportSale = Omit<ReportSale, 'total'> & { total: number }
+type NormalizedReportSaleWithClient = Omit<ReportSaleWithClient, 'total'> & { total: number }
+type NormalizedReportExpense = Omit<ReportExpense, 'value'> & { value: number }
+type NormalizedReportRevenue = Omit<ReportRevenue, 'value'> & { value: number }
 
 @Injectable()
 export class ReportsService {
@@ -23,12 +33,12 @@ export class ReportsService {
       where: { date: { gte: startDate } },
       include: { client: true },
       orderBy: { date: 'asc' },
-    })).map((sale) => ({ ...sale, total: Number(sale.total) }))
+    })).map((sale: ReportSaleWithClient) => ({ ...sale, total: Number(sale.total) }))
 
     return {
       period: period || '30d',
       data: sales,
-      total: sales.reduce((sum: number, sale) => sum + Number(sale.total), 0),
+      total: sales.reduce((sum: number, sale: NormalizedReportSaleWithClient) => sum + sale.total, 0),
     }
   }
 
@@ -36,25 +46,25 @@ export class ReportsService {
     const expenses = (await this.prisma.expense.findMany({
       where: period === 'month' ? { date: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) } } : undefined,
       orderBy: { date: 'asc' },
-    })).map((expense) => ({ ...expense, value: Number(expense.value) }))
+    })).map((expense: ReportExpense) => ({ ...expense, value: Number(expense.value) }))
 
     const revenues = (await this.prisma.revenue.findMany({
       where: period === 'month' ? { date: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) } } : undefined,
       orderBy: { date: 'asc' },
-    })).map((revenue) => ({ ...revenue, value: Number(revenue.value) }))
+    })).map((revenue: ReportRevenue) => ({ ...revenue, value: Number(revenue.value) }))
 
     const sales = (await this.prisma.sale.findMany({
       where: period === 'month' ? { date: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) } } : undefined,
       orderBy: { date: 'asc' },
-    })).map((sale) => ({ ...sale, total: Number(sale.total) }))
+    })).map((sale: ReportSale) => ({ ...sale, total: Number(sale.total) }))
 
     return {
       expenses,
       revenues,
       sales,
-      totalExpenses: expenses.reduce((sum: number, item) => sum + Number(item.value), 0),
-      totalRevenues: revenues.reduce((sum: number, item) => sum + Number(item.value), 0),
-      totalSales: sales.reduce((sum: number, item) => sum + Number(item.total), 0),
+      totalExpenses: expenses.reduce((sum: number, item: NormalizedReportExpense) => sum + item.value, 0),
+      totalRevenues: revenues.reduce((sum: number, item: NormalizedReportRevenue) => sum + item.value, 0),
+      totalSales: sales.reduce((sum: number, item: NormalizedReportSale) => sum + item.total, 0),
     }
   }
 }

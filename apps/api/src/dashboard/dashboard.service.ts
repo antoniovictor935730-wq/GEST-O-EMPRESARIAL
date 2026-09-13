@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common'
+import type { Prisma } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
+
+type DashboardSale = Prisma.SaleGetPayload<{ include: { client: true } }>
+type DashboardExpense = Prisma.ExpenseGetPayload<object>
 
 @Injectable()
 export class DashboardService {
@@ -51,11 +55,11 @@ export class DashboardService {
           take: 5,
           orderBy: { createdAt: 'desc' },
           include: { client: true },
-        })).map((sale) => ({ ...sale, total: Number(sale.total) })),
+        })).map((sale: DashboardSale) => ({ ...sale, total: Number(sale.total) })),
         expenses: (await this.prisma.expense.findMany({
           take: 5,
           orderBy: { createdAt: 'desc' },
-        })).map((expense) => ({ ...expense, value: Number(expense.value) })),
+        })).map((expense: DashboardExpense) => ({ ...expense, value: Number(expense.value) })),
       },
     }
   }
