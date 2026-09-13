@@ -25,13 +25,13 @@ import {
   StockSummary,
 } from './lib/api'
 
-const formatMoney = (value: number) => `€ ${value.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const formatMoney = (value: number) => `AOA ${value.toLocaleString('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 const fallbackStats = [
-  { label: 'Vendas do dia', value: '€ 0,00', change: '+0.0%' },
-  { label: 'Vendas do mês', value: '€ 0,00', change: '+0.0%' },
-  { label: 'Despesas', value: '€ 0,00', change: '-0.0%' },
-  { label: 'Lucro', value: '€ 0,00', change: '+0.0%' },
+  { label: 'Vendas do dia', value: 'AOA 0,00', change: '+0.0%' },
+  { label: 'Vendas do mês', value: 'AOA 0,00', change: '+0.0%' },
+  { label: 'Despesas', value: 'AOA 0,00', change: '-0.0%' },
+  { label: 'Lucro', value: 'AOA 0,00', change: '+0.0%' },
 ]
 
 const moduleConfig = [
@@ -51,9 +51,9 @@ const moduleConfig = [
 type ModuleName = typeof moduleConfig[number]
 
 const mockSales = [
-  { id: '#1051', customer: 'Maria Silva', total: '€ 2.420', status: 'Pago' },
-  { id: '#1052', customer: 'João Costa', total: '€ 1.760', status: 'Pago' },
-  { id: '#1053', customer: 'Ana Gomes', total: '€ 3.100', status: 'Em aberto' },
+  { id: '#1051', customer: 'Maria Silva', total: 'AOA 2.420', status: 'Pago' },
+  { id: '#1052', customer: 'João Costa', total: 'AOA 1.760', status: 'Pago' },
+  { id: '#1053', customer: 'Ana Gomes', total: 'AOA 3.100', status: 'Em aberto' },
 ]
 
 export default function App() {
@@ -242,16 +242,16 @@ export default function App() {
                 <div className="cash-summary">
                   <div>
                     <label>Entradas</label>
-                    <strong>{dashboard ? formatMoney(dashboard.summary.salesMonth) : '€ 0,00'}</strong>
+                    <strong>{dashboard ? formatMoney(dashboard.summary.salesMonth) : 'AOA 0,00'}</strong>
                   </div>
                   <div>
                     <label>Saídas</label>
-                    <strong>{dashboard ? formatMoney(dashboard.summary.totalExpenses) : '€ 0,00'}</strong>
+                    <strong>{dashboard ? formatMoney(dashboard.summary.totalExpenses) : 'AOA 0,00'}</strong>
                   </div>
                   <div>
                     <label>Saldo</label>
                     <strong className="accent">
-                      {dashboard ? formatMoney(dashboard.summary.estimatedProfit) : '€ 0,00'}
+                      {dashboard ? formatMoney(dashboard.summary.estimatedProfit) : 'AOA 0,00'}
                     </strong>
                   </div>
                 </div>
@@ -553,22 +553,22 @@ export default function App() {
             <section className="stats-grid">
               <article className="card stat-card">
                 <span>Vendas</span>
-                <strong>{financeSummary ? formatMoney(financeSummary.sales) : '€ 0,00'}</strong>
+                <strong>{financeSummary ? formatMoney(financeSummary.sales) : 'AOA 0,00'}</strong>
                 <small>Receita total</small>
               </article>
               <article className="card stat-card">
                 <span>Despesas</span>
-                <strong>{financeSummary ? formatMoney(financeSummary.expenses) : '€ 0,00'}</strong>
+                <strong>{financeSummary ? formatMoney(financeSummary.expenses) : 'AOA 0,00'}</strong>
                 <small>Custos do período</small>
               </article>
               <article className="card stat-card">
                 <span>Receitas</span>
-                <strong>{financeSummary ? formatMoney(financeSummary.revenues) : '€ 0,00'}</strong>
+                <strong>{financeSummary ? formatMoney(financeSummary.revenues) : 'AOA 0,00'}</strong>
                 <small>Saídas de caixa</small>
               </article>
               <article className="card stat-card">
                 <span>Lucro</span>
-                <strong>{financeSummary ? formatMoney(financeSummary.profit) : '€ 0,00'}</strong>
+                <strong>{financeSummary ? formatMoney(financeSummary.profit) : 'AOA 0,00'}</strong>
                 <small>Resultado líquido</small>
               </article>
             </section>
@@ -639,22 +639,22 @@ export default function App() {
             <section className="stats-grid">
               <article className="card stat-card">
                 <span>Vendas</span>
-                <strong>{salesReport ? formatMoney(Number(salesReport.total || 0)) : '€ 0,00'}</strong>
+                <strong>{salesReport ? formatMoney(Number(salesReport.total || 0)) : 'AOA 0,00'}</strong>
                 <small>{salesReport?.period || 'month'}</small>
               </article>
               <article className="card stat-card">
                 <span>Despesas</span>
-                <strong>{financialReport ? formatMoney(Number(financialReport.totalExpenses || 0)) : '€ 0,00'}</strong>
+                <strong>{financialReport ? formatMoney(Number(financialReport.totalExpenses || 0)) : 'AOA 0,00'}</strong>
                 <small>Gasto do período</small>
               </article>
               <article className="card stat-card">
                 <span>Receitas</span>
-                <strong>{financialReport ? formatMoney(Number(financialReport.totalRevenues || 0)) : '€ 0,00'}</strong>
+                <strong>{financialReport ? formatMoney(Number(financialReport.totalRevenues || 0)) : 'AOA 0,00'}</strong>
                 <small>Entrada do período</small>
               </article>
               <article className="card stat-card">
                 <span>Margem</span>
-                <strong>{financialReport ? formatMoney(Number((financialReport.totalRevenues || 0) - (financialReport.totalExpenses || 0))) : '€ 0,00'}</strong>
+                <strong>{financialReport ? formatMoney(Number((financialReport.totalRevenues || 0) - (financialReport.totalExpenses || 0))) : 'AOA 0,00'}</strong>
                 <small>Resultado líquido</small>
               </article>
             </section>
@@ -704,15 +704,15 @@ export default function App() {
                   <tbody>
                     <tr>
                       <td>Despesas</td>
-                      <td>{financialReport ? formatMoney(Number(financialReport.totalExpenses || 0)) : '€ 0,00'}</td>
+                      <td>{financialReport ? formatMoney(Number(financialReport.totalExpenses || 0)) : 'AOA 0,00'}</td>
                     </tr>
                     <tr>
                       <td>Receitas</td>
-                      <td>{financialReport ? formatMoney(Number(financialReport.totalRevenues || 0)) : '€ 0,00'}</td>
+                      <td>{financialReport ? formatMoney(Number(financialReport.totalRevenues || 0)) : 'AOA 0,00'}</td>
                     </tr>
                     <tr>
                       <td>Vendas</td>
-                      <td>{financialReport ? formatMoney(Number(financialReport.totalSales || 0)) : '€ 0,00'}</td>
+                      <td>{financialReport ? formatMoney(Number(financialReport.totalSales || 0)) : 'AOA 0,00'}</td>
                     </tr>
                   </tbody>
                 </table>
