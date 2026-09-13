@@ -60,6 +60,15 @@ export type EmployeeRecord = {
   position?: { name?: string } | null
 }
 
+export type ClientRecord = {
+  id: string
+  code: string
+  name: string
+  email?: string | null
+  phone?: string | null
+  status?: string
+}
+
 export type ProductRecord = {
   id: string
   name: string
@@ -228,6 +237,36 @@ export function createProduct(token: string, data: unknown) {
   return createResource<ProductRecord>(token, 'products', data)
 }
 
+export function createSale(token: string, data: unknown) {
+  return createResource<unknown>(token, 'sales', data)
+}
+
+export function createStockMovement(token: string, data: unknown) {
+  return createResource<StockMovement>(token, 'stock/movement', data)
+}
+
+export function updateResource<T>(token: string, path: string, data: unknown) {
+  return requestResource<T>(token, path, 'PUT', data)
+}
+
+export function deleteResource(token: string, path: string) {
+  return requestResource<unknown>(token, path, 'DELETE')
+}
+
+async function requestResource<T>(token: string, path: string, method: 'PUT' | 'DELETE', data?: unknown): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}/${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: data === undefined ? undefined : JSON.stringify(data),
+  })
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(payload.message || 'Não foi possível concluir a operação.')
+  return payload as T
+}
+
 export async function getProducts(token: string): Promise<ProductRecord[]> {
   const response = await fetch(`${API_BASE_URL}/products`, {
     headers: {
@@ -242,6 +281,15 @@ export async function getProducts(token: string): Promise<ProductRecord[]> {
     throw new Error(payload.message || 'Erro ao carregar produtos.')
   }
 
+  return Array.isArray(payload) ? payload : []
+}
+
+export async function getClients(token: string): Promise<ClientRecord[]> {
+  const response = await fetch(`${API_BASE_URL}/clients`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+  })
+  const payload = await response.json().catch(() => [])
+  if (!response.ok) throw new Error(payload.message || 'Erro ao carregar clientes.')
   return Array.isArray(payload) ? payload : []
 }
 

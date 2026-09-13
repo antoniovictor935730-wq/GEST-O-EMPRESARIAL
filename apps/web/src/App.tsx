@@ -1,14 +1,19 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import {
   clearSession,
+  ClientRecord,
   createClient,
   createEmployee,
   createProduct,
+  createSale,
+  createStockMovement,
+  deleteResource,
   DashboardSummary,
   EmployeeRecord,
   FinanceSummary,
   getDashboardSummary,
   getEmployees,
+  getClients,
   getFinanceEntries,
   getFinanceSummary,
   getFinancialReport,
@@ -26,6 +31,7 @@ import {
   StockAlert,
   StockMovement,
   StockSummary,
+  updateResource,
 } from './lib/api'
 
 const formatMoney = (value: number) => `AOA ${value.toLocaleString('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -63,6 +69,7 @@ export default function App() {
   const [session, setSession] = useState<SessionState | null>(null)
   const [dashboard, setDashboard] = useState<DashboardSummary | null>(null)
   const [employees, setEmployees] = useState<EmployeeRecord[]>([])
+  const [clients, setClients] = useState<ClientRecord[]>([])
   const [products, setProducts] = useState<ProductRecord[]>([])
   const [stockSummary, setStockSummary] = useState<StockSummary | null>(null)
   const [lowStock, setLowStock] = useState<StockAlert[]>([])
@@ -77,8 +84,9 @@ export default function App() {
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoadingDashboard, setIsLoadingDashboard] = useState(false)
-  const [activeForm, setActiveForm] = useState<'employee' | 'client' | 'product' | null>(null)
+  const [activeForm, setActiveForm] = useState<'employee' | 'client' | 'product' | 'sale' | 'movement' | null>(null)
   const [formData, setFormData] = useState<Record<string, string>>({})
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   useEffect(() => {
     const storedSession = getStoredSession()
@@ -91,6 +99,7 @@ export default function App() {
     if (!session) {
       setDashboard(null)
       setEmployees([])
+      setClients([])
       setProducts([])
       setStockSummary(null)
       setLowStock([])
@@ -113,8 +122,9 @@ export default function App() {
 
     const loadModuleData = async () => {
       try {
-        const [nextEmployees, nextProducts, nextStockSummary, nextLowStock, nextStockHistory, nextFinanceSummary, nextFinanceEntries, nextSalesReport, nextFinancialReport] = await Promise.all([
+        const [nextEmployees, nextClients, nextProducts, nextStockSummary, nextLowStock, nextStockHistory, nextFinanceSummary, nextFinanceEntries, nextSalesReport, nextFinancialReport] = await Promise.all([
           getEmployees(session.accessToken),
+          getClients(session.accessToken),
           getProducts(session.accessToken),
           getStockSummary(session.accessToken),
           getLowStock(session.accessToken),
@@ -126,6 +136,7 @@ export default function App() {
         ])
 
         setEmployees(nextEmployees)
+        setClients(nextClients)
         setProducts(nextProducts)
         setStockSummary(nextStockSummary)
         setLowStock(nextLowStock)
@@ -204,6 +215,16 @@ export default function App() {
     }
   }
 
+  const handleDelete = async (path: string, reload: () => Promise<void>) => {
+    if (!window.confirm('Tem certeza que deseja eliminar este registo?')) return
+    try {
+      await deleteResource(session!.accessToken, path)
+      await reload()
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Não foi possível eliminar o registo.')
+    }
+  }
+
   const handleLogout = () => {
     clearSession()
     setSession(null)
@@ -211,15 +232,17 @@ export default function App() {
     setError('')
   }
 
-  const openForm = (form: 'employee' | 'client' | 'product') => {
+  const openForm = (form: 'employee' | 'client' | 'product' | 'sale' | 'movement', record?: Record<string, unknown>) => {
     setError('')
-    setFormData({})
+    setFormData(record ? Object.fromEntries(Object.entries(record).map(([key, value]) => [key, String(value ?? '')])) : {})
+    setEditingId(record?.id ? String(record.id) : null)
     setActiveForm(form)
   }
 
   const closeForm = () => {
     setActiveForm(null)
     setFormData({})
+    setEditingId(null)
   }
 
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
@@ -229,13 +252,29 @@ export default function App() {
     try {
       setIsSubmitting(true)
       if (activeForm === 'employee') {
-        await createEmployee(session!.accessToken, formData)
+        if (editingId) await updateResource(session!.accessToken, `employees/${editingId}`, formData)
+        else await createEmployee(session!.accessToken, formData)
         setEmployees(await getEmployees(session!.accessToken))
       } else if (activeForm === 'client') {
-        await createClient(session!.accessToken, formData)
-      } else {
-        await createProduct(session!.accessToken, formData)
+        if (editingId) await updateResource(session!.accessToken, `clients/${editingId}`, formData)
+        else await createClient(session!.accessToken, formData)
+        setClients(await getClients(session!.accessToken))
+      } else if (activeForm === 'product') {
+        if (editingId) await updateResource(session!.accessToken, `products/${editingId}`, formData)
+        else await createProduct(session!.accessToken, formData)
         setProducts(await getProducts(session!.accessToken))
+      } else if (activeForm === 'sale') {
+        await createSale(session!.accessToken, {
+          ...formData,
+          items: [{ productId: formData.productId, quantity: formData.quantity || '1', price: formData.price }],
+        })
+        setProducts(await getProducts(session!.accessToken))
+      } else {
+        await createStockMovement(session!.accessToken, formData)
+        setProducts(await getProducts(session!.accessToken))
+        setStockSummary(await getStockSummary(session!.accessToken))
+        setLowStock(await getLowStock(session!.accessToken))
+        setStockHistory(await getStockHistory(session!.accessToken))
       }
       closeForm()
     } catch (createError) {
@@ -370,6 +409,7 @@ export default function App() {
                   <th>Departamento</th>
                   <th>Posição</th>
                   <th>Status</th>
+                  <th>Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -385,11 +425,15 @@ export default function App() {
                           {employee.status === 'ACTIVE' ? 'Ativo' : 'Inativo'}
                         </span>
                       </td>
+                      <td className="row-actions">
+                        <button type="button" onClick={() => openForm('employee', employee as unknown as Record<string, unknown>)}>Editar</button>
+                        <button type="button" onClick={() => handleDelete(`employees/${employee.id}`, async () => setEmployees(await getEmployees(session!.accessToken)))}>Eliminar</button>
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5}>Sem funcionários registados.</td>
+                    <td colSpan={6}>Sem funcionários registados.</td>
                   </tr>
                 )}
               </tbody>
@@ -410,22 +454,27 @@ export default function App() {
                   <th>Nome</th>
                   <th>Email</th>
                   <th>Status</th>
-                  <th>Mensal</th>
+                  <th>Código</th>
+                  <th>Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {mockSales.length > 0 ? (
-                  mockSales.map((sale) => (
-                    <tr key={sale.id}>
-                      <td>{sale.customer}</td>
-                      <td>{sale.customer.toLowerCase().replace(/\s+/g, '.')}@demo.com</td>
-                      <td><span className={sale.status === 'Pago' ? 'badge success' : 'badge warning'}>{sale.status}</span></td>
-                      <td>{sale.total}</td>
+                {clients.length > 0 ? (
+                  clients.map((client) => (
+                    <tr key={client.id}>
+                      <td>{client.name}</td>
+                      <td>{client.email || '—'}</td>
+                      <td><span className="badge success">{client.status === 'ACTIVE' ? 'Ativo' : client.status || 'Ativo'}</span></td>
+                      <td>{client.code}</td>
+                      <td className="row-actions">
+                        <button type="button" onClick={() => openForm('client', client as unknown as Record<string, unknown>)}>Editar</button>
+                        <button type="button" onClick={() => handleDelete(`clients/${client.id}`, async () => setClients(await getClients(session!.accessToken)))}>Eliminar</button>
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={4}>Sem clientes registados.</td>
+                    <td colSpan={5}>Sem clientes registados.</td>
                   </tr>
                 )}
               </tbody>
@@ -448,6 +497,7 @@ export default function App() {
                   <th>Categoria</th>
                   <th>Stock</th>
                   <th>Preço</th>
+                  <th>Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -459,11 +509,15 @@ export default function App() {
                       <td>{product.category?.name || '—'}</td>
                       <td>{product.stockCurrent}</td>
                       <td>{formatMoney(product.salePrice)}</td>
+                      <td className="row-actions">
+                        <button type="button" onClick={() => openForm('product', product as unknown as Record<string, unknown>)}>Editar</button>
+                        <button type="button" onClick={() => handleDelete(`products/${product.id}`, async () => setProducts(await getProducts(session!.accessToken)))}>Eliminar</button>
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5}>Sem produtos registados.</td>
+                    <td colSpan={6}>Sem produtos registados.</td>
                   </tr>
                 )}
               </tbody>
@@ -501,7 +555,7 @@ export default function App() {
               <article className="card module-card">
                 <div className="section-heading">
                   <h2>Alertas de stock</h2>
-                  <button type="button" className="primary-btn">Nova movimentação</button>
+                  <button type="button" className="primary-btn" onClick={() => openForm('movement')}>Nova movimentação</button>
                 </div>
                 <table>
                   <thead>
@@ -561,7 +615,7 @@ export default function App() {
           <section className="card module-card">
             <div className="section-heading">
               <h2>Vendas</h2>
-              <button type="button" className="primary-btn">Nova venda</button>
+              <button type="button" className="primary-btn" onClick={() => openForm('sale')}>Nova venda</button>
             </div>
             <table>
               <thead>
@@ -844,6 +898,42 @@ export default function App() {
                 <label>Nome do produto<input required value={formData.name || ''} onChange={(event) => setFormData({ ...formData, name: event.target.value })} /></label>
                 <label>Preço de venda<input required type="number" min="0" step="0.01" value={formData.salePrice || ''} onChange={(event) => setFormData({ ...formData, salePrice: event.target.value })} /></label>
                 <label>Stock inicial<input type="number" min="0" value={formData.stockCurrent || '0'} onChange={(event) => setFormData({ ...formData, stockCurrent: event.target.value })} /></label>
+              </>
+            ) : null}
+
+            {activeForm === 'sale' ? (
+              <>
+                <label>Produto
+                  <select required value={formData.productId || ''} onChange={(event) => setFormData({ ...formData, productId: event.target.value })}>
+                    <option value="">Selecione um produto</option>
+                    {products.map((product) => <option key={product.id} value={product.id}>{product.name} ({product.sku})</option>)}
+                  </select>
+                </label>
+                <label>Quantidade<input required type="number" min="1" value={formData.quantity || '1'} onChange={(event) => setFormData({ ...formData, quantity: event.target.value })} /></label>
+                <label>Preço unitário<input type="number" min="0" step="0.01" value={formData.price || ''} onChange={(event) => setFormData({ ...formData, price: event.target.value })} /></label>
+                <label>Método de pagamento
+                  <select value={formData.paymentMethod || 'CASH'} onChange={(event) => setFormData({ ...formData, paymentMethod: event.target.value })}>
+                    <option value="CASH">Dinheiro</option><option value="BANK_TRANSFER">Transferência</option><option value="TPA">TPA</option>
+                  </select>
+                </label>
+              </>
+            ) : null}
+
+            {activeForm === 'movement' ? (
+              <>
+                <label>Produto
+                  <select required value={formData.productId || ''} onChange={(event) => setFormData({ ...formData, productId: event.target.value })}>
+                    <option value="">Selecione um produto</option>
+                    {products.map((product) => <option key={product.id} value={product.id}>{product.name} ({product.sku})</option>)}
+                  </select>
+                </label>
+                <label>Tipo
+                  <select required value={formData.movementType || 'ENTRY'} onChange={(event) => setFormData({ ...formData, movementType: event.target.value })}>
+                    <option value="ENTRY">Entrada</option><option value="EXIT">Saída</option><option value="RETURN">Devolução</option><option value="ADJUSTMENT">Ajuste</option><option value="LOSS">Perda</option>
+                  </select>
+                </label>
+                <label>Quantidade<input required type="number" min="1" value={formData.quantity || ''} onChange={(event) => setFormData({ ...formData, quantity: event.target.value })} /></label>
+                <label>Motivo<input value={formData.reason || ''} onChange={(event) => setFormData({ ...formData, reason: event.target.value })} /></label>
               </>
             ) : null}
 

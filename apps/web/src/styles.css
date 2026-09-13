@@ -69,6 +69,28 @@ button {
   background: #0b1220;
 }
 
+.modal-card select {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 8px;
+  color: #e5eefb;
+  background: #0b1220;
+}
+
+.row-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.row-actions button {
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 6px;
+  padding: 5px 8px;
+  color: #dbeafe;
+  background: #17233a;
+}
+
 .icon-btn {
   border: 0;
   color: #cbd5e1;
