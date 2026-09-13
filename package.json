@@ -1,0 +1,14 @@
+{
+  "name": "erp-gestao-empresarial",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:web": "npm --workspace apps/web run dev",
+    "dev:api": "npm --workspace apps/api run dev",
+    "build": "npm --workspace apps/api run build && npm --workspace apps/web run build",
+    "start": "npm --workspace apps/api run start:prod"
+  }
+}

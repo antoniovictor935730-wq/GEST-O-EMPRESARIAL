@@ -1,0 +1,297 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  HR
+  SELLER
+  CASHIER
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum StockMovementType {
+  ENTRY
+  EXIT
+  SALE
+  RETURN
+  ADJUSTMENT
+  LOSS
+  TRANSFER
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  MULTICAIXA
+  TPA
+  OTHER
+}
+
+model User {
+  id        String      @id @default(uuid())
+  name      String
+  email     String      @unique
+  password  String
+  role      Role        @default(ADMIN)
+  active    Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  auditLogs AuditLog[]
+  employee  Employee?
+}
+
+model CompanySetting {
+  id             String   @id @default(uuid())
+  companyName    String
+  nif            String?
+  phone          String?
+  email          String?
+  address        String?
+  website        String?
+  socialMedia    Json?
+  bankDetails    Json?
+  logoUrl        String?
+  currency       String   @default("AOA")
+  documentConfig Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Department {
+  id          String      @id @default(uuid())
+  name        String      @unique
+  description String?
+  employees   Employee[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Position {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  employees Employee[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Employee {
+  id                String          @id @default(uuid())
+  employeeCode      String          @unique
+  fullName          String
+  birthDate         DateTime?
+  gender            String?
+  maritalStatus     String?
+  phone             String?
+  email             String?
+  address           String?
+  identificationNo  String?
+  contractType      String?
+  hireDate          DateTime?
+  salary            Decimal?        @db.Decimal(12, 2)
+  bankName          String?
+  accountNumber     String?
+  status            EmployeeStatus  @default(ACTIVE)
+  photoUrl          String?
+  notes             String?
+  departmentId      String?
+  department        Department?     @relation(fields: [departmentId], references: [id])
+  positionId        String?
+  position          Position?       @relation(fields: [positionId], references: [id])
+  userId            String?         @unique
+  user              User?           @relation(fields: [userId], references: [id])
+  attendance        Attendance[]
+  vacationRequests Vacation[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model Attendance {
+  id          String    @id @default(uuid())
+  employeeId  String
+  employee    Employee  @relation(fields: [employeeId], references: [id])
+  checkIn     DateTime?
+  checkOut    DateTime?
+  lateMinutes Int       @default(0)
+  absence     Boolean   @default(false)
+  workedHours Decimal?  @db.Decimal(5, 2)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Vacation {
+  id            String    @id @default(uuid())
+  employeeId    String
+  employee      Employee  @relation(fields: [employeeId], references: [id])
+  startDate     DateTime
+  endDate       DateTime
+  daysRequested Int
+  status        String    @default("PENDING")
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Client {
+  id             String   @id @default(uuid())
+  code           String   @unique
+  name           String
+  type           String   @default("INDIVIDUAL")
+  phone          String?
+  email          String?
+  address        String?
+  nif            String?
+  registeredAt   DateTime @default(now())
+  status         String   @default("ACTIVE")
+  observations   String?
+  sales          Sale[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Supplier {
+  id            String    @id @default(uuid())
+  name          String
+  company       String?
+  phone         String?
+  email         String?
+  address       String?
+  nif           String?
+  products      String?
+  purchases     Decimal?  @db.Decimal(12, 2)
+  paidAmount    Decimal?  @db.Decimal(12, 2)
+  pendingAmount Decimal?  @db.Decimal(12, 2)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Product {
+  id            String          @id @default(uuid())
+  sku           String          @unique
+  barcode       String?
+  name          String
+  description   String?
+  categoryId    String?
+  category      Category?       @relation(fields: [categoryId], references: [id])
+  brand         String?
+  unit          String?
+  purchasePrice Decimal?        @db.Decimal(12, 2)
+  salePrice     Decimal         @db.Decimal(12, 2)
+  stockCurrent  Int             @default(0)
+  stockMin      Int             @default(0)
+  stockMax      Int             @default(0)
+  supplierId    String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  stockMovements StockMovement[]
+  saleItems     SaleItem[]
+}
+
+model StockMovement {
+  id          String            @id @default(uuid())
+  productId   String
+  product     Product           @relation(fields: [productId], references: [id])
+  quantity    Int
+  movementType StockMovementType
+  reason      String?
+  createdAt   DateTime          @default(now())
+  userName    String?
+}
+
+model Sale {
+  id            String      @id @default(uuid())
+  saleNumber    String      @unique
+  date          DateTime    @default(now())
+  time          String?
+  userName      String?
+  clientId      String?
+  client        Client?     @relation(fields: [clientId], references: [id])
+  subtotal      Decimal     @db.Decimal(12, 2)
+  discount      Decimal     @default(0) @db.Decimal(12, 2)
+  total         Decimal     @db.Decimal(12, 2)
+  paymentMethod PaymentMethod @default(CASH)
+  status        String      @default("PAID")
+  items         SaleItem[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model SaleItem {
+  id        String   @id @default(uuid())
+  saleId    String
+  sale      Sale     @relation(fields: [saleId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Decimal  @db.Decimal(12, 2)
+  total     Decimal  @db.Decimal(12, 2)
+  createdAt DateTime @default(now())
+}
+
+model CashRegister {
+  id          String         @id @default(uuid())
+  date        DateTime       @default(now())
+  employeeName String?
+  openingAmount Decimal?     @db.Decimal(12, 2)
+  closingAmount Decimal?     @db.Decimal(12, 2)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model CashMovement {
+  id          String   @id @default(uuid())
+  type        String
+  description String
+  value       Decimal  @db.Decimal(12, 2)
+  date        DateTime @default(now())
+  time        String?
+  userName    String?
+  createdAt   DateTime @default(now())
+}
+
+model Expense {
+  id          String    @id @default(uuid())
+  category    String
+  description String
+  value       Decimal   @db.Decimal(12, 2)
+  date        DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+}
+
+model Revenue {
+  id          String    @id @default(uuid())
+  source      String
+  description String
+  value       Decimal   @db.Decimal(12, 2)
+  date        DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  module    String
+  details   String
+  createdAt DateTime @default(now())
+}
