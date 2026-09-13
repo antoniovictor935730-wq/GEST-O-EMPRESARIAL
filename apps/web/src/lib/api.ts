@@ -1,4 +1,9 @@
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+const configuredApiUrl = import.meta.env.VITE_API_URL
+export const API_BASE_URL = configuredApiUrl
+  ? configuredApiUrl.startsWith('http')
+    ? configuredApiUrl
+    : `https://${configuredApiUrl}`
+  : 'http://localhost:3000'
 
 export type SessionUser = {
   id: string
