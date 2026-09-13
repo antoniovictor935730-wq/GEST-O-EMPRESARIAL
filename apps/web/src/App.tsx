@@ -1,6 +1,9 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import {
   clearSession,
+  createClient,
+  createEmployee,
+  createProduct,
   DashboardSummary,
   EmployeeRecord,
   FinanceSummary,
@@ -74,6 +77,8 @@ export default function App() {
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoadingDashboard, setIsLoadingDashboard] = useState(false)
+  const [activeForm, setActiveForm] = useState<'employee' | 'client' | 'product' | null>(null)
+  const [formData, setFormData] = useState<Record<string, string>>({})
 
   useEffect(() => {
     const storedSession = getStoredSession()
@@ -206,6 +211,40 @@ export default function App() {
     setError('')
   }
 
+  const openForm = (form: 'employee' | 'client' | 'product') => {
+    setError('')
+    setFormData({})
+    setActiveForm(form)
+  }
+
+  const closeForm = () => {
+    setActiveForm(null)
+    setFormData({})
+  }
+
+  const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!activeForm) return
+
+    try {
+      setIsSubmitting(true)
+      if (activeForm === 'employee') {
+        await createEmployee(session!.accessToken, formData)
+        setEmployees(await getEmployees(session!.accessToken))
+      } else if (activeForm === 'client') {
+        await createClient(session!.accessToken, formData)
+      } else {
+        await createProduct(session!.accessToken, formData)
+        setProducts(await getProducts(session!.accessToken))
+      }
+      closeForm()
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : 'Não foi possível guardar o registo.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const renderModuleContent = () => {
     switch (currentModule) {
       case 'Dashboard':
@@ -321,7 +360,7 @@ export default function App() {
           <section className="card module-card">
             <div className="section-heading">
               <h2>Funcionários</h2>
-              <button type="button" className="primary-btn">Novo funcionário</button>
+              <button type="button" className="primary-btn" onClick={() => openForm('employee')}>Novo funcionário</button>
             </div>
             <table>
               <thead>
@@ -363,7 +402,7 @@ export default function App() {
           <section className="card module-card">
             <div className="section-heading">
               <h2>Clientes</h2>
-              <button type="button" className="primary-btn">Novo cliente</button>
+              <button type="button" className="primary-btn" onClick={() => openForm('client')}>Novo cliente</button>
             </div>
             <table>
               <thead>
@@ -399,7 +438,7 @@ export default function App() {
           <section className="card module-card">
             <div className="section-heading">
               <h2>Produtos</h2>
-              <button type="button" className="primary-btn">Adicionar produto</button>
+              <button type="button" className="primary-btn" onClick={() => openForm('product')}>Adicionar produto</button>
             </div>
             <table>
               <thead>
@@ -773,6 +812,46 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      {activeForm ? (
+        <div className="modal-backdrop" role="presentation">
+          <form className="modal-card" onSubmit={handleCreate}>
+            <div className="section-heading">
+              <h2>{activeForm === 'employee' ? 'Novo funcionário' : activeForm === 'client' ? 'Novo cliente' : 'Adicionar produto'}</h2>
+              <button type="button" className="icon-btn" onClick={closeForm} aria-label="Fechar formulário">×</button>
+            </div>
+
+            {activeForm === 'employee' ? (
+              <>
+                <label>Código<input required value={formData.employeeCode || ''} onChange={(event) => setFormData({ ...formData, employeeCode: event.target.value })} /></label>
+                <label>Nome completo<input required value={formData.fullName || ''} onChange={(event) => setFormData({ ...formData, fullName: event.target.value })} /></label>
+                <label>Email<input type="email" value={formData.email || ''} onChange={(event) => setFormData({ ...formData, email: event.target.value })} /></label>
+                <label>Telefone<input value={formData.phone || ''} onChange={(event) => setFormData({ ...formData, phone: event.target.value })} /></label>
+              </>
+            ) : null}
+
+            {activeForm === 'client' ? (
+              <>
+                <label>Código<input required value={formData.code || ''} onChange={(event) => setFormData({ ...formData, code: event.target.value })} /></label>
+                <label>Nome<input required value={formData.name || ''} onChange={(event) => setFormData({ ...formData, name: event.target.value })} /></label>
+                <label>Email<input type="email" value={formData.email || ''} onChange={(event) => setFormData({ ...formData, email: event.target.value })} /></label>
+                <label>Telefone<input value={formData.phone || ''} onChange={(event) => setFormData({ ...formData, phone: event.target.value })} /></label>
+              </>
+            ) : null}
+
+            {activeForm === 'product' ? (
+              <>
+                <label>SKU<input required value={formData.sku || ''} onChange={(event) => setFormData({ ...formData, sku: event.target.value })} /></label>
+                <label>Nome do produto<input required value={formData.name || ''} onChange={(event) => setFormData({ ...formData, name: event.target.value })} /></label>
+                <label>Preço de venda<input required type="number" min="0" step="0.01" value={formData.salePrice || ''} onChange={(event) => setFormData({ ...formData, salePrice: event.target.value })} /></label>
+                <label>Stock inicial<input type="number" min="0" value={formData.stockCurrent || '0'} onChange={(event) => setFormData({ ...formData, stockCurrent: event.target.value })} /></label>
+              </>
+            ) : null}
+
+            <button type="submit" className="primary-btn" disabled={isSubmitting}>{isSubmitting ? 'A guardar...' : 'Guardar'}</button>
+          </form>
+        </div>
+      ) : null}
+
       <aside className="sidebar">
         <div className="brand">ERP</div>
         <nav>

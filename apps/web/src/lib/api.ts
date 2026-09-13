@@ -198,6 +198,36 @@ export async function getEmployees(token: string): Promise<EmployeeRecord[]> {
   return Array.isArray(payload) ? payload : []
 }
 
+async function createResource<T>(token: string, path: string, data: unknown): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}/${path}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  })
+
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(payload.message || 'Não foi possível guardar o registo.')
+  }
+
+  return payload as T
+}
+
+export function createEmployee(token: string, data: unknown) {
+  return createResource<EmployeeRecord>(token, 'employees', data)
+}
+
+export function createClient(token: string, data: unknown) {
+  return createResource<unknown>(token, 'clients', data)
+}
+
+export function createProduct(token: string, data: unknown) {
+  return createResource<ProductRecord>(token, 'products', data)
+}
+
 export async function getProducts(token: string): Promise<ProductRecord[]> {
   const response = await fetch(`${API_BASE_URL}/products`, {
     headers: {

@@ -34,6 +34,48 @@ button {
   cursor: pointer;
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(2, 6, 23, 0.72);
+}
+
+.modal-card {
+  width: min(100%, 460px);
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 12px;
+  background: #111c31;
+  box-shadow: 0 24px 80px rgba(2, 6, 23, 0.5);
+}
+
+.modal-card label {
+  display: grid;
+  gap: 7px;
+}
+
+.modal-card input {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 8px;
+  color: #e5eefb;
+  background: #0b1220;
+}
+
+.icon-btn {
+  border: 0;
+  color: #cbd5e1;
+  background: transparent;
+  font-size: 1.5rem;
+}
+
 .login-page {
   min-height: 100vh;
   display: grid;
