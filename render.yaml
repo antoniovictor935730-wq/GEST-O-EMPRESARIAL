@@ -9,9 +9,9 @@ services:
     name: erp-api
     env: node
     plan: free
-    rootDir: .
-    buildCommand: npm install --include=dev && npm --workspace apps/api run build
-    startCommand: npm --workspace apps/api run start:prod:render
+    rootDir: apps/api
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm run start:prod:render
     envVars:
       - key: NODE_ENV
         value: production
@@ -31,9 +31,9 @@ services:
     name: erp-web
     env: node
     plan: free
-    rootDir: .
-    buildCommand: npm install --include=dev && npm --workspace apps/web run build
-    startCommand: npm --workspace apps/web run preview -- --port $PORT
+    rootDir: apps/web
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm run preview -- --port $PORT
     envVars:
       - key: NODE_ENV
         value: production
