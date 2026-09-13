@@ -1,15 +1,12 @@
 import { Injectable } from '@nestjs/common'
-import type { Prisma } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 
-type ReportSale = Prisma.SaleGetPayload<{}>
-type ReportSaleWithClient = Prisma.SaleGetPayload<{ include: { client: true } }>
-type ReportExpense = Prisma.ExpenseGetPayload<object>
-type ReportRevenue = Prisma.RevenueGetPayload<object>
-type NormalizedReportSale = Omit<ReportSale, 'total'> & { total: number }
-type NormalizedReportSaleWithClient = Omit<ReportSaleWithClient, 'total'> & { total: number }
-type NormalizedReportExpense = Omit<ReportExpense, 'value'> & { value: number }
-type NormalizedReportRevenue = Omit<ReportRevenue, 'value'> & { value: number }
+type ReportSale = { total: unknown }
+type ReportExpense = { value: unknown }
+type ReportRevenue = { value: unknown }
+type NormalizedReportSale = { total: number }
+type NormalizedReportExpense = { value: number }
+type NormalizedReportRevenue = { value: number }
 
 @Injectable()
 export class ReportsService {
@@ -33,12 +30,12 @@ export class ReportsService {
       where: { date: { gte: startDate } },
       include: { client: true },
       orderBy: { date: 'asc' },
-    })).map((sale: ReportSaleWithClient) => ({ ...sale, total: Number(sale.total) }))
+    })).map((sale: ReportSale) => ({ ...sale, total: Number(sale.total) }))
 
     return {
       period: period || '30d',
       data: sales,
-      total: sales.reduce((sum: number, sale: NormalizedReportSaleWithClient) => sum + sale.total, 0),
+      total: sales.reduce((sum: number, sale: NormalizedReportSale) => sum + sale.total, 0),
     }
   }
 
