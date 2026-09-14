@@ -71,6 +71,11 @@ export class SalesService {
     const discount = Number(data.discount || 0)
     const total = Number(data.total || subtotal - discount)
 
+    if (data.clientId) {
+      const client = await this.prisma.client.findUnique({ where: { id: data.clientId } })
+      if (!client) throw new NotFoundException('Cliente não encontrado.')
+    }
+
     const sale = await this.prisma.sale.create({
       data: {
         saleNumber,

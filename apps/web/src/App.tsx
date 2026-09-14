@@ -1178,6 +1178,12 @@ export default function App() {
 
             {activeForm === 'sale' ? (
               <>
+                <label>Cliente
+                  <select required value={formData.clientId || ''} onChange={(event) => setFormData({ ...formData, clientId: event.target.value })}>
+                    <option value="">Selecione um cliente</option>
+                    {clients.map((client) => <option key={client.id} value={client.id}>{client.name} ({client.code})</option>)}
+                  </select>
+                </label>
                 <label>Produto
                   <select required value={formData.productId || ''} onChange={(event) => setFormData({ ...formData, productId: event.target.value })}>
                     <option value="">Selecione um produto</option>
