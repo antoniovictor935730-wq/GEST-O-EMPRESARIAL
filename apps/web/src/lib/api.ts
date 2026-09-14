@@ -78,6 +78,35 @@ export type CategoryRecord = {
   name: string
 }
 
+export type SupplierRecord = {
+  id: string
+  name: string
+  company?: string | null
+  phone?: string | null
+  email?: string | null
+  nif?: string | null
+  products?: string | null
+  pendingAmount?: number | string | null
+}
+
+export type CashSummary = {
+  totalSales: number
+  totalExpenses: number
+  totalMovements: number
+  cashAvailable: number
+}
+
+export type CompanySettings = {
+  id?: string
+  companyName: string
+  nif?: string | null
+  phone?: string | null
+  email?: string | null
+  address?: string | null
+  website?: string | null
+  currency?: string | null
+}
+
 export type ClientRecord = {
   id: string
   code: string
@@ -277,6 +306,14 @@ export function createCategory(token: string, data: unknown) {
   return createResource<CategoryRecord>(token, 'categories', data)
 }
 
+export function createSupplier(token: string, data: unknown) {
+  return createResource<SupplierRecord>(token, 'suppliers', data)
+}
+
+export function createCashMovement(token: string, data: unknown) {
+  return createResource<unknown>(token, 'cash/movement', data)
+}
+
 export function updateResource<T>(token: string, path: string, data: unknown) {
   return requestResource<T>(token, path, 'PUT', data)
 }
@@ -344,6 +381,24 @@ export function getPositions(token: string) {
 
 export function getCategories(token: string) {
   return getCollection<CategoryRecord>(token, 'categories', 'Erro ao carregar categorias.')
+}
+
+export function getSuppliers(token: string) {
+  return getCollection<SupplierRecord>(token, 'suppliers', 'Erro ao carregar fornecedores.')
+}
+
+export async function getCashSummary(token: string): Promise<CashSummary> {
+  const response = await fetch(`${API_BASE_URL}/cash/summary`, { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } })
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(payload.message || 'Erro ao carregar o caixa.')
+  return payload as CashSummary
+}
+
+export async function getCompanySettings(token: string): Promise<CompanySettings> {
+  const response = await fetch(`${API_BASE_URL}/company-settings`, { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } })
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(payload.message || 'Erro ao carregar configurações.')
+  return payload as CompanySettings
 }
 
 export async function getStockSummary(token: string): Promise<StockSummary> {

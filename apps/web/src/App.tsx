@@ -2,8 +2,11 @@ import { FormEvent, useEffect, useMemo, useState } from 'react'
 import {
   clearSession,
   CategoryRecord,
+  CashSummary,
   ClientRecord,
+  CompanySettings,
   createCategory,
+  createCashMovement,
   createDepartment,
   createClient,
   createEmployee,
@@ -11,6 +14,7 @@ import {
   createSale,
   createStockMovement,
   createPosition,
+  createSupplier,
   DepartmentRecord,
   deleteResource,
   DashboardSummary,
@@ -20,6 +24,8 @@ import {
   getEmployees,
   getClients,
   getCategories,
+  getCashSummary,
+  getCompanySettings,
   getDepartments,
   getFinanceEntries,
   getFinanceSummary,
@@ -27,6 +33,7 @@ import {
   getLowStock,
   getProducts,
   getPositions,
+  getSuppliers,
   getSalesReport,
   getStockHistory,
   getStockSummary,
@@ -40,6 +47,7 @@ import {
   StockAlert,
   StockMovement,
   StockSummary,
+  SupplierRecord,
   updateResource,
 } from './lib/api'
 
@@ -86,6 +94,9 @@ export default function App() {
   const [departments, setDepartments] = useState<DepartmentRecord[]>([])
   const [positions, setPositions] = useState<PositionRecord[]>([])
   const [categories, setCategories] = useState<CategoryRecord[]>([])
+  const [suppliers, setSuppliers] = useState<SupplierRecord[]>([])
+  const [cashSummary, setCashSummary] = useState<CashSummary | null>(null)
+  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null)
   const [stockSummary, setStockSummary] = useState<StockSummary | null>(null)
   const [lowStock, setLowStock] = useState<StockAlert[]>([])
   const [stockHistory, setStockHistory] = useState<StockMovement[]>([])
@@ -99,7 +110,7 @@ export default function App() {
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoadingDashboard, setIsLoadingDashboard] = useState(false)
-  const [activeForm, setActiveForm] = useState<'employee' | 'client' | 'product' | 'sale' | 'movement' | 'department' | 'position' | 'category' | null>(null)
+  const [activeForm, setActiveForm] = useState<'employee' | 'client' | 'product' | 'sale' | 'movement' | 'department' | 'position' | 'category' | 'supplier' | 'cashMovement' | 'settings' | null>(null)
   const [formData, setFormData] = useState<Record<string, string>>({})
   const [editingId, setEditingId] = useState<string | null>(null)
 
@@ -119,6 +130,9 @@ export default function App() {
       setDepartments([])
       setPositions([])
       setCategories([])
+      setSuppliers([])
+      setCashSummary(null)
+      setCompanySettings(null)
       setStockSummary(null)
       setLowStock([])
       setStockHistory([])
@@ -140,13 +154,16 @@ export default function App() {
 
     const loadModuleData = async () => {
       try {
-        const [nextEmployees, nextClients, nextProducts, nextDepartments, nextPositions, nextCategories, nextStockSummary, nextLowStock, nextStockHistory, nextFinanceSummary, nextFinanceEntries, nextSalesReport, nextFinancialReport] = await Promise.all([
+        const [nextEmployees, nextClients, nextProducts, nextDepartments, nextPositions, nextCategories, nextSuppliers, nextCashSummary, nextCompanySettings, nextStockSummary, nextLowStock, nextStockHistory, nextFinanceSummary, nextFinanceEntries, nextSalesReport, nextFinancialReport] = await Promise.all([
           getEmployees(session.accessToken),
           getClients(session.accessToken),
           getProducts(session.accessToken),
           getDepartments(session.accessToken),
           getPositions(session.accessToken),
           getCategories(session.accessToken),
+          getSuppliers(session.accessToken),
+          getCashSummary(session.accessToken),
+          getCompanySettings(session.accessToken),
           getStockSummary(session.accessToken),
           getLowStock(session.accessToken),
           getStockHistory(session.accessToken),
@@ -162,6 +179,9 @@ export default function App() {
         setDepartments(nextDepartments)
         setPositions(nextPositions)
         setCategories(nextCategories)
+        setSuppliers(nextSuppliers)
+        setCashSummary(nextCashSummary)
+        setCompanySettings(nextCompanySettings)
         setStockSummary(nextStockSummary)
         setLowStock(nextLowStock)
         setStockHistory(nextStockHistory)
@@ -256,7 +276,7 @@ export default function App() {
     setError('')
   }
 
-  const openForm = (form: 'employee' | 'client' | 'product' | 'sale' | 'movement' | 'department' | 'position' | 'category', record?: Record<string, unknown>) => {
+  const openForm = (form: 'employee' | 'client' | 'product' | 'sale' | 'movement' | 'department' | 'position' | 'category' | 'supplier' | 'cashMovement' | 'settings', record?: Record<string, unknown>) => {
     setError('')
     setFormData(record ? Object.fromEntries(Object.entries(record).map(([key, value]) => [key, String(value ?? '')])) : {})
     setEditingId(record?.id ? String(record.id) : null)
@@ -291,6 +311,16 @@ export default function App() {
         if (editingId) await updateResource(session!.accessToken, `categories/${editingId}`, formData)
         else await createCategory(session!.accessToken, formData)
         setCategories(await getCategories(session!.accessToken))
+      } else if (activeForm === 'supplier') {
+        if (editingId) await updateResource(session!.accessToken, `suppliers/${editingId}`, formData)
+        else await createSupplier(session!.accessToken, formData)
+        setSuppliers(await getSuppliers(session!.accessToken))
+      } else if (activeForm === 'cashMovement') {
+        await createCashMovement(session!.accessToken, formData)
+        setCashSummary(await getCashSummary(session!.accessToken))
+      } else if (activeForm === 'settings') {
+        await updateResource(session!.accessToken, 'company-settings', formData)
+        setCompanySettings(await getCompanySettings(session!.accessToken))
       } else if (activeForm === 'client') {
         if (editingId) await updateResource(session!.accessToken, `clients/${editingId}`, formData)
         else await createClient(session!.accessToken, formData)
@@ -521,6 +551,16 @@ export default function App() {
           </section>
         )
 
+      case 'Fornecedores':
+        return (
+          <section className="card module-card">
+            <div className="section-heading"><h2>Fornecedores</h2><button type="button" className="primary-btn" onClick={() => openForm('supplier')}>Novo fornecedor</button></div>
+            <table><thead><tr><th>Nome</th><th>Empresa</th><th>Contacto</th><th>Produtos</th><th>Pendente</th><th>Ações</th></tr></thead><tbody>
+              {suppliers.length > 0 ? suppliers.map((supplier) => <tr key={supplier.id}><td>{supplier.name}</td><td>{supplier.company || '—'}</td><td>{supplier.phone || supplier.email || '—'}</td><td>{supplier.products || '—'}</td><td>{formatMoney(Number(supplier.pendingAmount || 0))}</td><td className="row-actions"><button type="button" onClick={() => openForm('supplier', supplier as unknown as Record<string, unknown>)}>Editar</button><button type="button" onClick={() => handleDelete(`suppliers/${supplier.id}`, async () => setSuppliers(await getSuppliers(session!.accessToken)))}>Eliminar</button></td></tr>) : <tr><td colSpan={6}>Sem fornecedores registados.</td></tr>}
+            </tbody></table>
+          </section>
+        )
+
       case 'Departamentos':
         return (
           <section className="card module-card">
@@ -743,6 +783,22 @@ export default function App() {
           </section>
         )
 
+      case 'Caixa':
+        return (
+          <>
+            <section className="stats-grid">
+              <article className="card stat-card"><span>Vendas</span><strong>{formatMoney(cashSummary?.totalSales ?? 0)}</strong><small>Total registado</small></article>
+              <article className="card stat-card"><span>Despesas</span><strong>{formatMoney(cashSummary?.totalExpenses ?? 0)}</strong><small>Custos registados</small></article>
+              <article className="card stat-card"><span>Movimentos</span><strong>{formatMoney(cashSummary?.totalMovements ?? 0)}</strong><small>Lançamentos de caixa</small></article>
+              <article className="card stat-card"><span>Saldo disponível</span><strong>{formatMoney(cashSummary?.cashAvailable ?? 0)}</strong><small>Vendas menos despesas</small></article>
+            </section>
+            <section className="card module-card">
+              <div className="section-heading"><h2>Movimentos de caixa</h2><button type="button" className="primary-btn" onClick={() => openForm('cashMovement')}>Novo movimento</button></div>
+              <p>Registe entradas e saídas para manter o saldo financeiro atualizado.</p>
+            </section>
+          </>
+        )
+
       case 'Financeiro':
         return (
           <>
@@ -917,13 +973,23 @@ export default function App() {
           </>
         )
 
-      default:
+      case 'Configurações':
         return (
           <section className="card module-card">
-            <h2>{currentModule}</h2>
-            <p>Esta área do ERP será expandida com gestão específica para este módulo.</p>
+            <div className="section-heading"><h2>Configurações da empresa</h2><button type="button" className="primary-btn" onClick={() => openForm('settings', companySettings as unknown as Record<string, unknown>)}>Editar dados</button></div>
+            <table><tbody>
+              <tr><th>Empresa</th><td>{companySettings?.companyName || '—'}</td></tr>
+              <tr><th>NIF</th><td>{companySettings?.nif || '—'}</td></tr>
+              <tr><th>Telefone</th><td>{companySettings?.phone || '—'}</td></tr>
+              <tr><th>Email</th><td>{companySettings?.email || '—'}</td></tr>
+              <tr><th>Endereço</th><td>{companySettings?.address || '—'}</td></tr>
+              <tr><th>Moeda</th><td>{companySettings?.currency || 'AOA'}</td></tr>
+            </tbody></table>
           </section>
         )
+
+      default:
+        return null
     }
   }
 
@@ -1004,6 +1070,36 @@ export default function App() {
                 <label>Nome<input required value={formData.name || ''} onChange={(event) => setFormData({ ...formData, name: event.target.value })} /></label>
                 <label>Email<input type="email" value={formData.email || ''} onChange={(event) => setFormData({ ...formData, email: event.target.value })} /></label>
                 <label>Telefone<input value={formData.phone || ''} onChange={(event) => setFormData({ ...formData, phone: event.target.value })} /></label>
+              </>
+            ) : null}
+
+            {activeForm === 'supplier' ? (
+              <>
+                <label>Nome<input required value={formData.name || ''} onChange={(event) => setFormData({ ...formData, name: event.target.value })} /></label>
+                <label>Empresa<input value={formData.company || ''} onChange={(event) => setFormData({ ...formData, company: event.target.value })} /></label>
+                <label>Telefone<input value={formData.phone || ''} onChange={(event) => setFormData({ ...formData, phone: event.target.value })} /></label>
+                <label>Email<input type="email" value={formData.email || ''} onChange={(event) => setFormData({ ...formData, email: event.target.value })} /></label>
+                <label>NIF<input value={formData.nif || ''} onChange={(event) => setFormData({ ...formData, nif: event.target.value })} /></label>
+                <label>Produtos fornecidos<input value={formData.products || ''} onChange={(event) => setFormData({ ...formData, products: event.target.value })} /></label>
+              </>
+            ) : null}
+
+            {activeForm === 'cashMovement' ? (
+              <>
+                <label>Tipo<select required value={formData.type || ''} onChange={(event) => setFormData({ ...formData, type: event.target.value })}><option value="">Selecione</option><option value="INCOME">Entrada</option><option value="EXPENSE">Saída</option></select></label>
+                <label>Descrição<input required value={formData.description || ''} onChange={(event) => setFormData({ ...formData, description: event.target.value })} /></label>
+                <label>Valor<input required type="number" min="0" step="0.01" value={formData.value || ''} onChange={(event) => setFormData({ ...formData, value: event.target.value })} /></label>
+              </>
+            ) : null}
+
+            {activeForm === 'settings' ? (
+              <>
+                <label>Nome da empresa<input required value={formData.companyName || ''} onChange={(event) => setFormData({ ...formData, companyName: event.target.value })} /></label>
+                <label>NIF<input value={formData.nif || ''} onChange={(event) => setFormData({ ...formData, nif: event.target.value })} /></label>
+                <label>Telefone<input value={formData.phone || ''} onChange={(event) => setFormData({ ...formData, phone: event.target.value })} /></label>
+                <label>Email<input type="email" value={formData.email || ''} onChange={(event) => setFormData({ ...formData, email: event.target.value })} /></label>
+                <label>Endereço<input value={formData.address || ''} onChange={(event) => setFormData({ ...formData, address: event.target.value })} /></label>
+                <label>Moeda<input value={formData.currency || 'AOA'} onChange={(event) => setFormData({ ...formData, currency: event.target.value })} /></label>
               </>
             ) : null}
 
