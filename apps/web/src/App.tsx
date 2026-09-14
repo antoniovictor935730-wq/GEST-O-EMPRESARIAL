@@ -997,7 +997,7 @@ export default function App() {
     return (
       <div className="login-page">
         <div className="login-card">
-          <img className="login-logo" src="/logo.svg" alt="HEL Technology Service" />
+          <img className="login-logo" src="/logo.png" alt="HEL Technology Service" />
           <h1>Entrar no painel</h1>
           <p>Gestão empresarial centralizada em um único ambiente.</p>
 
@@ -1171,7 +1171,7 @@ export default function App() {
       ) : null}
 
       <aside className="sidebar">
-        <div className="brand"><img src="/logo.svg" alt="HEL Technology Service" /></div>
+        <div className="brand"><img src="/logo.png" alt="HEL Technology Service" /></div>
         <nav>
           {moduleConfig.map((module) => (
             <button
