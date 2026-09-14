@@ -96,6 +96,17 @@ export type CashSummary = {
   cashAvailable: number
 }
 
+export type SaleRecord = {
+  id: string
+  saleNumber: string
+  date: string
+  total: number | string
+  paymentMethod?: string
+  status?: string
+  client?: { name?: string } | null
+  items?: Array<{ productId: string; quantity: number; price: number | string; product?: { name?: string } }>
+}
+
 export type CompanySettings = {
   id?: string
   companyName: string
@@ -287,7 +298,11 @@ export function createProduct(token: string, data: unknown) {
 }
 
 export function createSale(token: string, data: unknown) {
-  return createResource<unknown>(token, 'sales', data)
+  return createResource<SaleRecord>(token, 'sales', data)
+}
+
+export function getSales(token: string) {
+  return getCollection<SaleRecord>(token, 'sales', 'Erro ao carregar vendas.')
 }
 
 export function createStockMovement(token: string, data: unknown) {

@@ -117,4 +117,38 @@ export class SalesService {
 
     return sale
   }
+
+  async update(id: string, data: any) {
+    const sale = await this.prisma.sale.findUnique({ where: { id } })
+    if (!sale) throw new NotFoundException('Venda não encontrada.')
+
+    return this.prisma.sale.update({
+      where: { id },
+      data: {
+        clientId: data.clientId || null,
+        paymentMethod: data.paymentMethod,
+        status: data.status,
+      },
+      include: { client: true, items: { include: { product: true } } },
+    })
+  }
+
+  async remove(id: string) {
+    const sale = await this.prisma.sale.findUnique({
+      where: { id },
+      include: { items: true },
+    })
+    if (!sale) throw new NotFoundException('Venda não encontrada.')
+
+    return this.prisma.$transaction(async (transaction) => {
+      for (const item of sale.items) {
+        await transaction.product.update({
+          where: { id: item.productId },
+          data: { stockCurrent: { increment: item.quantity } },
+        })
+      }
+      await transaction.saleItem.deleteMany({ where: { saleId: id } })
+      return transaction.sale.delete({ where: { id } })
+    })
+  }
 }

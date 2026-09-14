@@ -35,6 +35,7 @@ import {
   getProducts,
   getPositions,
   getSuppliers,
+  getSales,
   getSalesReport,
   getStockHistory,
   getStockSummary,
@@ -43,6 +44,7 @@ import {
   ProductRecord,
   PositionRecord,
   ReportSummary,
+  SaleRecord,
   saveSession,
   SessionState,
   StockAlert,
@@ -80,18 +82,13 @@ const moduleConfig = [
 
 type ModuleName = typeof moduleConfig[number]
 
-const mockSales = [
-  { id: '#1051', customer: 'Maria Silva', total: 'AOA 2.420', status: 'Pago' },
-  { id: '#1052', customer: 'João Costa', total: 'AOA 1.760', status: 'Pago' },
-  { id: '#1053', customer: 'Ana Gomes', total: 'AOA 3.100', status: 'Em aberto' },
-]
-
 export default function App() {
   const [session, setSession] = useState<SessionState | null>(null)
   const [dashboard, setDashboard] = useState<DashboardSummary | null>(null)
   const [employees, setEmployees] = useState<EmployeeRecord[]>([])
   const [clients, setClients] = useState<ClientRecord[]>([])
   const [products, setProducts] = useState<ProductRecord[]>([])
+  const [sales, setSales] = useState<SaleRecord[]>([])
   const [departments, setDepartments] = useState<DepartmentRecord[]>([])
   const [positions, setPositions] = useState<PositionRecord[]>([])
   const [categories, setCategories] = useState<CategoryRecord[]>([])
@@ -128,6 +125,7 @@ export default function App() {
       setEmployees([])
       setClients([])
       setProducts([])
+      setSales([])
       setDepartments([])
       setPositions([])
       setCategories([])
@@ -155,7 +153,7 @@ export default function App() {
 
     const loadModuleData = async () => {
       try {
-        const [nextEmployees, nextClients, nextProducts, nextDepartments, nextPositions, nextCategories, nextSuppliers, nextCashSummary, nextCompanySettings, nextStockSummary, nextLowStock, nextStockHistory, nextFinanceSummary, nextFinanceEntries, nextSalesReport, nextFinancialReport] = await Promise.all([
+        const [nextEmployees, nextClients, nextProducts, nextDepartments, nextPositions, nextCategories, nextSuppliers, nextCashSummary, nextCompanySettings, nextStockSummary, nextLowStock, nextStockHistory, nextFinanceSummary, nextFinanceEntries, nextSales, nextSalesReport, nextFinancialReport] = await Promise.all([
           getEmployees(session.accessToken),
           getClients(session.accessToken),
           getProducts(session.accessToken),
@@ -170,6 +168,7 @@ export default function App() {
           getStockHistory(session.accessToken),
           getFinanceSummary(session.accessToken),
           getFinanceEntries(session.accessToken),
+          getSales(session.accessToken),
           getSalesReport(session.accessToken, 'month'),
           getFinancialReport(session.accessToken, 'month'),
         ])
@@ -188,6 +187,7 @@ export default function App() {
         setStockHistory(nextStockHistory)
         setFinanceSummary(nextFinanceSummary)
         setFinanceEntries(nextFinanceEntries)
+        setSales(nextSales)
         setSalesReport(nextSalesReport)
         setFinancialReport(nextFinancialReport)
       } catch (moduleError) {
@@ -349,10 +349,13 @@ export default function App() {
         else await createProduct(session!.accessToken, formData)
         setProducts(await getProducts(session!.accessToken))
       } else if (activeForm === 'sale') {
-        await createSale(session!.accessToken, {
+        const salePayload = {
           ...formData,
           items: [{ productId: formData.productId, quantity: formData.quantity || '1', price: formData.price }],
-        })
+        }
+        if (editingId) await updateResource(session!.accessToken, `sales/${editingId}`, salePayload)
+        else await createSale(session!.accessToken, salePayload)
+        setSales(await getSales(session!.accessToken))
         setProducts(await getProducts(session!.accessToken))
       } else {
         await createStockMovement(session!.accessToken, {
@@ -791,19 +794,28 @@ export default function App() {
                 <tr>
                   <th>Doc</th>
                   <th>Cliente</th>
+                  <th>Produto</th>
+                  <th>Data</th>
                   <th>Total</th>
                   <th>Status</th>
+                  <th>Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {mockSales.map((sale) => (
+                {sales.length > 0 ? sales.map((sale) => (
                   <tr key={sale.id}>
-                    <td>{sale.id}</td>
-                    <td>{sale.customer}</td>
-                    <td>{sale.total}</td>
-                    <td><span className={sale.status === 'Em aberto' ? 'badge warning' : 'badge success'}>{sale.status}</span></td>
+                    <td>{sale.saleNumber}</td>
+                    <td>{sale.client?.name || 'Cliente não informado'}</td>
+                    <td>{sale.items?.[0]?.product?.name || '—'}</td>
+                    <td>{new Date(sale.date).toLocaleDateString('pt-PT')}</td>
+                    <td>{formatMoney(Number(sale.total || 0))}</td>
+                    <td><span className={sale.status === 'PAID' ? 'badge success' : 'badge warning'}>{sale.status === 'PAID' ? 'Pago' : sale.status || 'Pendente'}</span></td>
+                    <td className="row-actions">
+                      <button type="button" onClick={() => openForm('sale', { ...sale, productId: sale.items?.[0]?.productId || '', quantity: sale.items?.[0]?.quantity || '1', price: sale.items?.[0]?.price || '' } as unknown as Record<string, unknown>)}>Editar</button>
+                      <button type="button" onClick={() => handleDelete(`sales/${sale.id}`, async () => { setSales(await getSales(session!.accessToken)); setProducts(await getProducts(session!.accessToken)) })}>Eliminar</button>
+                    </td>
                   </tr>
-                ))}
+                )) : <tr><td colSpan={7}>Sem vendas registadas.</td></tr>}
               </tbody>
             </table>
           </section>
