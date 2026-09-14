@@ -270,7 +270,10 @@ export default function App() {
         })
         setProducts(await getProducts(session!.accessToken))
       } else {
-        await createStockMovement(session!.accessToken, formData)
+        await createStockMovement(session!.accessToken, {
+          ...formData,
+          movementType: formData.movementType || 'ENTRY',
+        })
         setProducts(await getProducts(session!.accessToken))
         setStockSummary(await getStockSummary(session!.accessToken))
         setLowStock(await getLowStock(session!.accessToken))
