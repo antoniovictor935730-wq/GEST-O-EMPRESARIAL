@@ -88,8 +88,8 @@ export class EmployeesService {
         status: data.status,
         photoUrl: data.photoUrl,
         notes: data.notes,
-        department: data.departmentId ? { connect: { id: data.departmentId } } : undefined,
-        position: data.positionId ? { connect: { id: data.positionId } } : undefined,
+        department: data.departmentId ? { connect: { id: data.departmentId } } : data.departmentId === '' ? { disconnect: true } : undefined,
+        position: data.positionId ? { connect: { id: data.positionId } } : data.positionId === '' ? { disconnect: true } : undefined,
       },
     })
   }

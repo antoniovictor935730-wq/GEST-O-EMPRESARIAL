@@ -1,12 +1,17 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import {
   clearSession,
+  CategoryRecord,
   ClientRecord,
+  createCategory,
+  createDepartment,
   createClient,
   createEmployee,
   createProduct,
   createSale,
   createStockMovement,
+  createPosition,
+  DepartmentRecord,
   deleteResource,
   DashboardSummary,
   EmployeeRecord,
@@ -14,17 +19,21 @@ import {
   getDashboardSummary,
   getEmployees,
   getClients,
+  getCategories,
+  getDepartments,
   getFinanceEntries,
   getFinanceSummary,
   getFinancialReport,
   getLowStock,
   getProducts,
+  getPositions,
   getSalesReport,
   getStockHistory,
   getStockSummary,
   getStoredSession,
   loginRequest,
   ProductRecord,
+  PositionRecord,
   ReportSummary,
   saveSession,
   SessionState,
@@ -46,9 +55,12 @@ const fallbackStats = [
 const moduleConfig = [
   'Dashboard',
   'Funcionários',
+  'Departamentos',
+  'Posições',
   'Clientes',
   'Fornecedores',
   'Produtos',
+  'Categorias',
   'Stock',
   'Vendas',
   'Caixa',
@@ -71,6 +83,9 @@ export default function App() {
   const [employees, setEmployees] = useState<EmployeeRecord[]>([])
   const [clients, setClients] = useState<ClientRecord[]>([])
   const [products, setProducts] = useState<ProductRecord[]>([])
+  const [departments, setDepartments] = useState<DepartmentRecord[]>([])
+  const [positions, setPositions] = useState<PositionRecord[]>([])
+  const [categories, setCategories] = useState<CategoryRecord[]>([])
   const [stockSummary, setStockSummary] = useState<StockSummary | null>(null)
   const [lowStock, setLowStock] = useState<StockAlert[]>([])
   const [stockHistory, setStockHistory] = useState<StockMovement[]>([])
@@ -84,7 +99,7 @@ export default function App() {
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoadingDashboard, setIsLoadingDashboard] = useState(false)
-  const [activeForm, setActiveForm] = useState<'employee' | 'client' | 'product' | 'sale' | 'movement' | null>(null)
+  const [activeForm, setActiveForm] = useState<'employee' | 'client' | 'product' | 'sale' | 'movement' | 'department' | 'position' | 'category' | null>(null)
   const [formData, setFormData] = useState<Record<string, string>>({})
   const [editingId, setEditingId] = useState<string | null>(null)
 
@@ -101,6 +116,9 @@ export default function App() {
       setEmployees([])
       setClients([])
       setProducts([])
+      setDepartments([])
+      setPositions([])
+      setCategories([])
       setStockSummary(null)
       setLowStock([])
       setStockHistory([])
@@ -122,10 +140,13 @@ export default function App() {
 
     const loadModuleData = async () => {
       try {
-        const [nextEmployees, nextClients, nextProducts, nextStockSummary, nextLowStock, nextStockHistory, nextFinanceSummary, nextFinanceEntries, nextSalesReport, nextFinancialReport] = await Promise.all([
+        const [nextEmployees, nextClients, nextProducts, nextDepartments, nextPositions, nextCategories, nextStockSummary, nextLowStock, nextStockHistory, nextFinanceSummary, nextFinanceEntries, nextSalesReport, nextFinancialReport] = await Promise.all([
           getEmployees(session.accessToken),
           getClients(session.accessToken),
           getProducts(session.accessToken),
+          getDepartments(session.accessToken),
+          getPositions(session.accessToken),
+          getCategories(session.accessToken),
           getStockSummary(session.accessToken),
           getLowStock(session.accessToken),
           getStockHistory(session.accessToken),
@@ -138,6 +159,9 @@ export default function App() {
         setEmployees(nextEmployees)
         setClients(nextClients)
         setProducts(nextProducts)
+        setDepartments(nextDepartments)
+        setPositions(nextPositions)
+        setCategories(nextCategories)
         setStockSummary(nextStockSummary)
         setLowStock(nextLowStock)
         setStockHistory(nextStockHistory)
@@ -232,7 +256,7 @@ export default function App() {
     setError('')
   }
 
-  const openForm = (form: 'employee' | 'client' | 'product' | 'sale' | 'movement', record?: Record<string, unknown>) => {
+  const openForm = (form: 'employee' | 'client' | 'product' | 'sale' | 'movement' | 'department' | 'position' | 'category', record?: Record<string, unknown>) => {
     setError('')
     setFormData(record ? Object.fromEntries(Object.entries(record).map(([key, value]) => [key, String(value ?? '')])) : {})
     setEditingId(record?.id ? String(record.id) : null)
@@ -255,6 +279,18 @@ export default function App() {
         if (editingId) await updateResource(session!.accessToken, `employees/${editingId}`, formData)
         else await createEmployee(session!.accessToken, formData)
         setEmployees(await getEmployees(session!.accessToken))
+      } else if (activeForm === 'department') {
+        if (editingId) await updateResource(session!.accessToken, `departments/${editingId}`, formData)
+        else await createDepartment(session!.accessToken, formData)
+        setDepartments(await getDepartments(session!.accessToken))
+      } else if (activeForm === 'position') {
+        if (editingId) await updateResource(session!.accessToken, `positions/${editingId}`, formData)
+        else await createPosition(session!.accessToken, formData)
+        setPositions(await getPositions(session!.accessToken))
+      } else if (activeForm === 'category') {
+        if (editingId) await updateResource(session!.accessToken, `categories/${editingId}`, formData)
+        else await createCategory(session!.accessToken, formData)
+        setCategories(await getCategories(session!.accessToken))
       } else if (activeForm === 'client') {
         if (editingId) await updateResource(session!.accessToken, `clients/${editingId}`, formData)
         else await createClient(session!.accessToken, formData)
@@ -485,6 +521,26 @@ export default function App() {
           </section>
         )
 
+      case 'Departamentos':
+        return (
+          <section className="card module-card">
+            <div className="section-heading"><h2>Departamentos</h2><button type="button" className="primary-btn" onClick={() => openForm('department')}>Novo departamento</button></div>
+            <table><thead><tr><th>Nome</th><th>Descrição</th><th>Ações</th></tr></thead><tbody>
+              {departments.length > 0 ? departments.map((department) => <tr key={department.id}><td>{department.name}</td><td>{department.description || '—'}</td><td className="row-actions"><button type="button" onClick={() => openForm('department', department as unknown as Record<string, unknown>)}>Editar</button><button type="button" onClick={() => handleDelete(`departments/${department.id}`, async () => setDepartments(await getDepartments(session!.accessToken)))}>Eliminar</button></td></tr>) : <tr><td colSpan={3}>Sem departamentos registados.</td></tr>}
+            </tbody></table>
+          </section>
+        )
+
+      case 'Posições':
+        return (
+          <section className="card module-card">
+            <div className="section-heading"><h2>Posições</h2><button type="button" className="primary-btn" onClick={() => openForm('position')}>Nova posição</button></div>
+            <table><thead><tr><th>Nome</th><th>Ações</th></tr></thead><tbody>
+              {positions.length > 0 ? positions.map((position) => <tr key={position.id}><td>{position.name}</td><td className="row-actions"><button type="button" onClick={() => openForm('position', position as unknown as Record<string, unknown>)}>Editar</button><button type="button" onClick={() => handleDelete(`positions/${position.id}`, async () => setPositions(await getPositions(session!.accessToken)))}>Eliminar</button></td></tr>) : <tr><td colSpan={2}>Sem posições registadas.</td></tr>}
+            </tbody></table>
+          </section>
+        )
+
       case 'Produtos':
         return (
           <section className="card module-card">
@@ -525,6 +581,16 @@ export default function App() {
                 )}
               </tbody>
             </table>
+          </section>
+        )
+
+      case 'Categorias':
+        return (
+          <section className="card module-card">
+            <div className="section-heading"><h2>Categorias</h2><button type="button" className="primary-btn" onClick={() => openForm('category')}>Nova categoria</button></div>
+            <table><thead><tr><th>Nome</th><th>Ações</th></tr></thead><tbody>
+              {categories.length > 0 ? categories.map((category) => <tr key={category.id}><td>{category.name}</td><td className="row-actions"><button type="button" onClick={() => openForm('category', category as unknown as Record<string, unknown>)}>Editar</button><button type="button" onClick={() => handleDelete(`categories/${category.id}`, async () => setCategories(await getCategories(session!.accessToken)))}>Eliminar</button></td></tr>) : <tr><td colSpan={2}>Sem categorias registadas.</td></tr>}
+            </tbody></table>
           </section>
         )
 
@@ -907,7 +973,7 @@ export default function App() {
         <div className="modal-backdrop" role="presentation">
           <form className="modal-card" onSubmit={handleCreate}>
             <div className="section-heading">
-              <h2>{activeForm === 'employee' ? 'Novo funcionário' : activeForm === 'client' ? 'Novo cliente' : 'Adicionar produto'}</h2>
+              <h2>{activeForm === 'employee' ? 'Novo funcionário' : activeForm === 'client' ? 'Novo cliente' : activeForm === 'product' ? 'Adicionar produto' : activeForm === 'department' ? 'Novo departamento' : activeForm === 'position' ? 'Nova posição' : activeForm === 'category' ? 'Nova categoria' : activeForm === 'sale' ? 'Nova venda' : 'Nova movimentação'}</h2>
               <button type="button" className="icon-btn" onClick={closeForm} aria-label="Fechar formulário">×</button>
             </div>
 
@@ -917,6 +983,18 @@ export default function App() {
                 <label>Nome completo<input required value={formData.fullName || ''} onChange={(event) => setFormData({ ...formData, fullName: event.target.value })} /></label>
                 <label>Email<input type="email" value={formData.email || ''} onChange={(event) => setFormData({ ...formData, email: event.target.value })} /></label>
                 <label>Telefone<input value={formData.phone || ''} onChange={(event) => setFormData({ ...formData, phone: event.target.value })} /></label>
+                <label>Departamento
+                  <select value={formData.departmentId || ''} onChange={(event) => setFormData({ ...formData, departmentId: event.target.value })}>
+                    <option value="">Sem departamento</option>
+                    {departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}
+                  </select>
+                </label>
+                <label>Posição
+                  <select value={formData.positionId || ''} onChange={(event) => setFormData({ ...formData, positionId: event.target.value })}>
+                    <option value="">Sem posição</option>
+                    {positions.map((position) => <option key={position.id} value={position.id}>{position.name}</option>)}
+                  </select>
+                </label>
               </>
             ) : null}
 
@@ -935,7 +1013,24 @@ export default function App() {
                 <label>Nome do produto<input required value={formData.name || ''} onChange={(event) => setFormData({ ...formData, name: event.target.value })} /></label>
                 <label>Preço de venda<input required type="number" min="0" step="0.01" value={formData.salePrice || ''} onChange={(event) => setFormData({ ...formData, salePrice: event.target.value })} /></label>
                 <label>Stock inicial<input type="number" min="0" value={formData.stockCurrent || '0'} onChange={(event) => setFormData({ ...formData, stockCurrent: event.target.value })} /></label>
+                <label>Categoria
+                  <select value={formData.categoryId || ''} onChange={(event) => setFormData({ ...formData, categoryId: event.target.value })}>
+                    <option value="">Sem categoria</option>
+                    {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+                  </select>
+                </label>
               </>
+            ) : null}
+
+            {activeForm === 'department' ? (
+              <>
+                <label>Nome<input required value={formData.name || ''} onChange={(event) => setFormData({ ...formData, name: event.target.value })} /></label>
+                <label>Descrição<input value={formData.description || ''} onChange={(event) => setFormData({ ...formData, description: event.target.value })} /></label>
+              </>
+            ) : null}
+
+            {activeForm === 'position' || activeForm === 'category' ? (
+              <label>Nome<input required value={formData.name || ''} onChange={(event) => setFormData({ ...formData, name: event.target.value })} /></label>
             ) : null}
 
             {activeForm === 'sale' ? (

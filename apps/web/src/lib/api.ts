@@ -56,8 +56,26 @@ export type EmployeeRecord = {
   email?: string | null
   phone?: string | null
   status?: string
+  departmentId?: string | null
+  positionId?: string | null
   department?: { name?: string } | null
   position?: { name?: string } | null
+}
+
+export type DepartmentRecord = {
+  id: string
+  name: string
+  description?: string | null
+}
+
+export type PositionRecord = {
+  id: string
+  name: string
+}
+
+export type CategoryRecord = {
+  id: string
+  name: string
 }
 
 export type ClientRecord = {
@@ -77,6 +95,7 @@ export type ProductRecord = {
   stockMin: number
   stockMax: number
   salePrice: number
+  categoryId?: string | null
   category?: { name?: string } | null
 }
 
@@ -246,6 +265,18 @@ export function createStockMovement(token: string, data: unknown) {
   return createResource<StockMovement>(token, 'stock/movement', data)
 }
 
+export function createDepartment(token: string, data: unknown) {
+  return createResource<DepartmentRecord>(token, 'departments', data)
+}
+
+export function createPosition(token: string, data: unknown) {
+  return createResource<PositionRecord>(token, 'positions', data)
+}
+
+export function createCategory(token: string, data: unknown) {
+  return createResource<CategoryRecord>(token, 'categories', data)
+}
+
 export function updateResource<T>(token: string, path: string, data: unknown) {
   return requestResource<T>(token, path, 'PUT', data)
 }
@@ -292,6 +323,27 @@ export async function getClients(token: string): Promise<ClientRecord[]> {
   const payload = await response.json().catch(() => [])
   if (!response.ok) throw new Error(payload.message || 'Erro ao carregar clientes.')
   return Array.isArray(payload) ? payload : []
+}
+
+async function getCollection<T>(token: string, path: string, message: string): Promise<T[]> {
+  const response = await fetch(`${API_BASE_URL}/${path}`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+  })
+  const payload = await response.json().catch(() => [])
+  if (!response.ok) throw new Error(payload.message || message)
+  return Array.isArray(payload) ? payload as T[] : []
+}
+
+export function getDepartments(token: string) {
+  return getCollection<DepartmentRecord>(token, 'departments', 'Erro ao carregar departamentos.')
+}
+
+export function getPositions(token: string) {
+  return getCollection<PositionRecord>(token, 'positions', 'Erro ao carregar posições.')
+}
+
+export function getCategories(token: string) {
+  return getCollection<CategoryRecord>(token, 'categories', 'Erro ao carregar categorias.')
 }
 
 export async function getStockSummary(token: string): Promise<StockSummary> {

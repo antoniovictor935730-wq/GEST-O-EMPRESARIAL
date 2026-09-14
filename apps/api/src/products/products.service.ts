@@ -67,7 +67,7 @@ export class ProductsService {
         stockCurrent: data.stockCurrent !== undefined ? Number(data.stockCurrent) : undefined,
         stockMin: data.stockMin !== undefined ? Number(data.stockMin) : undefined,
         stockMax: data.stockMax !== undefined ? Number(data.stockMax) : undefined,
-        category: data.categoryId ? { connect: { id: data.categoryId } } : undefined,
+        category: data.categoryId ? { connect: { id: data.categoryId } } : data.categoryId === '' ? { disconnect: true } : undefined,
       },
     })
   }
