@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { BadRequestException, Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 
 @Injectable()
@@ -21,12 +21,17 @@ export class CashService {
   }
 
   async createRegister(data: any) {
+    const closingAmount = Number(data.closingAmount)
+    if (!Number.isFinite(closingAmount) || closingAmount < 0) {
+      throw new BadRequestException('Informe um valor final válido para fechar o dia.')
+    }
+
     return this.prisma.cashRegister.create({
       data: {
         date: new Date(data.date || Date.now()),
         employeeName: data.employeeName,
         openingAmount: Number(data.openingAmount || 0),
-        closingAmount: Number(data.closingAmount || 0),
+        closingAmount,
       },
     })
   }

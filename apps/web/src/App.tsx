@@ -336,6 +336,8 @@ export default function App() {
           employeeName: session!.user.name,
           date: new Date().toISOString(),
         })
+        const refreshedDashboard = await getDashboardSummary(session!.accessToken)
+        setDashboard(refreshedDashboard)
         setCashSummary(await getCashSummary(session!.accessToken))
       } else if (activeForm === 'settings') {
         await updateResource(session!.accessToken, 'company-settings', formData)
