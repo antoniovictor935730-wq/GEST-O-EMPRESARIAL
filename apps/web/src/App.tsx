@@ -197,7 +197,7 @@ export default function App() {
 
     loadDashboard()
     loadModuleData()
-  }, [session])
+  }, [session, currentModule])
 
   const stats = useMemo(() => {
     if (!dashboard) {
@@ -248,6 +248,21 @@ export default function App() {
   const goToDashboardArea = (label: string) => {
     setCurrentModule(dashboardStatTargets[label] || 'Dashboard')
   }
+
+  const monthlySales = useMemo(() => {
+    const totals = Array.from({ length: 12 }, () => 0)
+    const currentYear = new Date().getFullYear()
+
+    sales.forEach((sale) => {
+      const date = new Date(sale.date)
+      if (date.getFullYear() === currentYear) {
+        totals[date.getMonth()] += Number(sale.total || 0)
+      }
+    })
+
+    const maximum = Math.max(...totals, 1)
+    return totals.map((total) => Math.max(8, Math.round((total / maximum) * 100)))
+  }, [sales])
 
   const handleLogin = async (event: FormEvent) => {
     event.preventDefault()
@@ -369,6 +384,7 @@ export default function App() {
         setLowStock(await getLowStock(session!.accessToken))
         setStockHistory(await getStockHistory(session!.accessToken))
       }
+      setDashboard(await getDashboardSummary(session!.accessToken))
       closeForm()
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : 'Não foi possível guardar o registo.')
@@ -406,8 +422,11 @@ export default function App() {
                   <span className="chip positive">+18.4%</span>
                 </div>
                 <div className="chart-bars">
-                  {[42, 58, 50, 75, 68, 82, 90, 78, 96, 84, 110, 120].map((height, index) => (
-                    <span key={index} style={{ height: `${height}%` }} />
+                  {monthlySales.map((height, index) => (
+                    <span key={index} title={`Mês ${index + 1}: ${formatMoney(sales.reduce((total, sale) => {
+                      const date = new Date(sale.date)
+                      return date.getFullYear() === new Date().getFullYear() && date.getMonth() === index ? total + Number(sale.total || 0) : total
+                    }, 0))}`} style={{ height: `${height}%` }} />
                   ))}
                 </div>
               </article>

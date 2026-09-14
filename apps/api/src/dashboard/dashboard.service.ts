@@ -23,9 +23,15 @@ export class DashboardService {
       this.prisma.product.count({ where: { stockCurrent: { lte: 5 } } }),
     ])
 
+    const latestTodayRegister = await this.prisma.cashRegister.findFirst({
+      where: { date: { gte: startOfDay, lt: startOfNextDay } },
+      orderBy: { date: 'desc' },
+    })
+    const dailySalesStart = latestTodayRegister?.date || startOfDay
+
     const totalDailySales = await this.prisma.sale.aggregate({
       _sum: { total: true },
-      where: { date: { gte: startOfDay, lt: startOfNextDay } },
+      where: { date: { gt: dailySalesStart, lt: startOfNextDay } },
     })
 
     const totalMonthlySales = await this.prisma.sale.aggregate({
