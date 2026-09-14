@@ -75,6 +75,7 @@ export type ProductRecord = {
   sku: string
   stockCurrent: number
   stockMin: number
+  stockMax: number
   salePrice: number
   category?: { name?: string } | null
 }

@@ -554,6 +554,40 @@ export default function App() {
               </article>
             </section>
 
+            <section className="card module-card">
+              <div className="section-heading">
+                <h2>Inventário</h2>
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Produto</th>
+                    <th>SKU</th>
+                    <th>Stock atual</th>
+                    <th>Mínimo</th>
+                    <th>Máximo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {products.length > 0 ? (
+                    products.map((product) => (
+                      <tr key={product.id}>
+                        <td>{product.name}</td>
+                        <td>{product.sku}</td>
+                        <td>{product.stockCurrent}</td>
+                        <td>{product.stockMin}</td>
+                        <td>{product.stockMax}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5}>Sem produtos registados.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </section>
+
             <section className="content-grid">
               <article className="card module-card">
                 <div className="section-heading">
