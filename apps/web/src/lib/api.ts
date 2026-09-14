@@ -333,6 +333,10 @@ export function createCashRegister(token: string, data: unknown) {
   return createResource<unknown>(token, 'cash/register', data)
 }
 
+export function createExpense(token: string, data: unknown) {
+  return createResource<FinanceEntry>(token, 'finance/expenses', data)
+}
+
 export function updateResource<T>(token: string, path: string, data: unknown) {
   return requestResource<T>(token, path, 'PUT', data)
 }
