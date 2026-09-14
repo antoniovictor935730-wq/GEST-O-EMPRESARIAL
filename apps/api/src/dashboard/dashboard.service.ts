@@ -10,6 +10,8 @@ export class DashboardService {
 
   async getSummary(period: string) {
     const now = new Date()
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const startOfNextDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
     const startOfYear = new Date(now.getFullYear(), 0, 1)
 
@@ -20,6 +22,11 @@ export class DashboardService {
       this.prisma.product.count(),
       this.prisma.product.count({ where: { stockCurrent: { lte: 5 } } }),
     ])
+
+    const totalDailySales = await this.prisma.sale.aggregate({
+      _sum: { total: true },
+      where: { date: { gte: startOfDay, lt: startOfNextDay } },
+    })
 
     const totalMonthlySales = await this.prisma.sale.aggregate({
       _sum: { total: true },
@@ -38,7 +45,7 @@ export class DashboardService {
     return {
       period,
       summary: {
-        salesToday: Number(totalMonthlySales._sum.total ?? 0),
+        salesToday: Number(totalDailySales._sum.total ?? 0),
         salesMonth: Number(totalMonthlySales._sum.total ?? 0),
         salesYear: Number(totalYearSales._sum.total ?? 0),
         totalExpenses: Number(totalExpenses._sum.value ?? 0),

@@ -7,6 +7,7 @@ import {
   CompanySettings,
   createCategory,
   createCashMovement,
+  createCashRegister,
   createDepartment,
   createClient,
   createEmployee,
@@ -110,7 +111,7 @@ export default function App() {
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoadingDashboard, setIsLoadingDashboard] = useState(false)
-  const [activeForm, setActiveForm] = useState<'employee' | 'client' | 'product' | 'sale' | 'movement' | 'department' | 'position' | 'category' | 'supplier' | 'cashMovement' | 'settings' | null>(null)
+  const [activeForm, setActiveForm] = useState<'employee' | 'client' | 'product' | 'sale' | 'movement' | 'department' | 'position' | 'category' | 'supplier' | 'cashMovement' | 'cashClose' | 'settings' | null>(null)
   const [formData, setFormData] = useState<Record<string, string>>({})
   const [editingId, setEditingId] = useState<string | null>(null)
 
@@ -287,7 +288,7 @@ export default function App() {
     setError('')
   }
 
-  const openForm = (form: 'employee' | 'client' | 'product' | 'sale' | 'movement' | 'department' | 'position' | 'category' | 'supplier' | 'cashMovement' | 'settings', record?: Record<string, unknown>) => {
+  const openForm = (form: 'employee' | 'client' | 'product' | 'sale' | 'movement' | 'department' | 'position' | 'category' | 'supplier' | 'cashMovement' | 'cashClose' | 'settings', record?: Record<string, unknown>) => {
     setError('')
     setFormData(record ? Object.fromEntries(Object.entries(record).map(([key, value]) => [key, String(value ?? '')])) : {})
     setEditingId(record?.id ? String(record.id) : null)
@@ -328,6 +329,13 @@ export default function App() {
         setSuppliers(await getSuppliers(session!.accessToken))
       } else if (activeForm === 'cashMovement') {
         await createCashMovement(session!.accessToken, formData)
+        setCashSummary(await getCashSummary(session!.accessToken))
+      } else if (activeForm === 'cashClose') {
+        await createCashRegister(session!.accessToken, {
+          closingAmount: formData.closingAmount,
+          employeeName: session!.user.name,
+          date: new Date().toISOString(),
+        })
         setCashSummary(await getCashSummary(session!.accessToken))
       } else if (activeForm === 'settings') {
         await updateResource(session!.accessToken, 'company-settings', formData)
@@ -402,7 +410,7 @@ export default function App() {
               <article className="card summary-card">
                 <div className="section-heading">
                   <h2>Fluxo do caixa</h2>
-                  <span className="chip neutral">{isLoadingDashboard ? 'A carregar...' : 'Hoje'}</span>
+                  <button type="button" className="secondary-btn" onClick={() => openForm('cashClose')}>Fechar dia</button>
                 </div>
                 <div className="cash-summary">
                   <button type="button" className="cash-summary-link" onClick={() => setCurrentModule('Vendas')}>
@@ -1057,7 +1065,7 @@ export default function App() {
         <div className="modal-backdrop" role="presentation">
           <form className="modal-card" onSubmit={handleCreate}>
             <div className="section-heading">
-              <h2>{activeForm === 'employee' ? 'Novo funcionário' : activeForm === 'client' ? 'Novo cliente' : activeForm === 'product' ? 'Adicionar produto' : activeForm === 'department' ? 'Novo departamento' : activeForm === 'position' ? 'Nova posição' : activeForm === 'category' ? 'Nova categoria' : activeForm === 'sale' ? 'Nova venda' : 'Nova movimentação'}</h2>
+              <h2>{activeForm === 'employee' ? 'Novo funcionário' : activeForm === 'client' ? 'Novo cliente' : activeForm === 'product' ? 'Adicionar produto' : activeForm === 'department' ? 'Novo departamento' : activeForm === 'position' ? 'Nova posição' : activeForm === 'category' ? 'Nova categoria' : activeForm === 'supplier' ? 'Novo fornecedor' : activeForm === 'cashMovement' ? 'Novo movimento de caixa' : activeForm === 'cashClose' ? 'Fechar dia' : activeForm === 'settings' ? 'Configurações da empresa' : activeForm === 'sale' ? 'Nova venda' : 'Nova movimentação'}</h2>
               <button type="button" className="icon-btn" onClick={closeForm} aria-label="Fechar formulário">×</button>
             </div>
 
@@ -1107,6 +1115,13 @@ export default function App() {
                 <label>Tipo<select required value={formData.type || ''} onChange={(event) => setFormData({ ...formData, type: event.target.value })}><option value="">Selecione</option><option value="INCOME">Entrada</option><option value="EXPENSE">Saída</option></select></label>
                 <label>Descrição<input required value={formData.description || ''} onChange={(event) => setFormData({ ...formData, description: event.target.value })} /></label>
                 <label>Valor<input required type="number" min="0" step="0.01" value={formData.value || ''} onChange={(event) => setFormData({ ...formData, value: event.target.value })} /></label>
+              </>
+            ) : null}
+
+            {activeForm === 'cashClose' ? (
+              <>
+                <p>Registe o valor final do caixa para encerrar o dia de trabalho.</p>
+                <label>Valor final<input required type="number" min="0" step="0.01" value={formData.closingAmount || ''} onChange={(event) => setFormData({ ...formData, closingAmount: event.target.value })} /></label>
               </>
             ) : null}
 

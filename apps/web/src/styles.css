@@ -263,6 +263,27 @@ button {
   transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
 }
 
+.secondary-btn {
+  border: 1px solid rgba(255, 16, 37, 0.55);
+  border-radius: 8px;
+  padding: 8px 11px;
+  color: #ffdce0;
+  background: rgba(255, 16, 37, 0.1);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+.secondary-btn:hover,
+.secondary-btn:focus-visible {
+  border-color: var(--red);
+  background: rgba(255, 16, 37, 0.2);
+  outline: none;
+  transform: translateY(-2px);
+}
+
 .main-content {
   flex: 1;
   padding: 28px;
