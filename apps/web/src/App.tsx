@@ -843,6 +843,15 @@ export default function App() {
         )
 
       case 'Caixa':
+        const cashChartValues = [
+          { label: 'Vendas', value: Math.max(0, cashSummary?.totalSales ?? 0), className: 'sales' },
+          { label: 'Despesas', value: Math.max(0, cashSummary?.totalExpenses ?? 0), className: 'expenses' },
+          { label: 'Saldo', value: Math.max(0, cashSummary?.cashAvailable ?? 0), className: 'balance' },
+        ]
+        const cashChartTotal = cashChartValues.reduce((total, item) => total + item.value, 0)
+        const cashChartPercentages = cashChartTotal > 0
+          ? cashChartValues.map((item) => Math.round((item.value / cashChartTotal) * 100))
+          : [0, 0, 0]
         return (
           <>
             <section className="stats-grid">
@@ -854,6 +863,23 @@ export default function App() {
             <section className="card module-card">
               <div className="section-heading"><h2>Movimentos de caixa</h2><button type="button" className="primary-btn" onClick={() => openForm('cashMovement')}>Novo movimento</button></div>
               <p>Registe entradas e saídas para manter o saldo financeiro atualizado.</p>
+            </section>
+            <section className="card cash-chart-card">
+              <div className="section-heading">
+                <div><h2>Estado geral do caixa</h2><p>Distribuição dos valores registados</p></div>
+                <span className="chip neutral">{cashChartTotal > 0 ? 'Atualizado' : 'Sem dados'}</span>
+              </div>
+              <div className="cash-chart-layout">
+                <div className="pie-chart-3d" style={{ '--sales-stop': `${cashChartPercentages[0]}%`, '--expenses-stop': `${cashChartPercentages[0] + cashChartPercentages[1]}%` } as React.CSSProperties} aria-label="Gráfico de pizza do estado geral do caixa" role="img" />
+                <div className="cash-chart-legend">
+                  {cashChartValues.map((item, index) => (
+                    <div className="legend-item" key={item.label}>
+                      <span className={`legend-swatch ${item.className}`} />
+                      <span><strong>{item.label}</strong><small>{cashChartPercentages[index]}% · {formatMoney(item.value)}</small></span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </section>
           </>
         )
