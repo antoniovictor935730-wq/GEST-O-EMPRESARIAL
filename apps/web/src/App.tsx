@@ -237,6 +237,17 @@ export default function App() {
     ]
   }, [dashboard])
 
+  const dashboardStatTargets: Record<string, ModuleName> = {
+    'Vendas do dia': 'Vendas',
+    'Vendas do mês': 'Vendas',
+    Despesas: 'Financeiro',
+    Lucro: 'Relatórios',
+  }
+
+  const goToDashboardArea = (label: string) => {
+    setCurrentModule(dashboardStatTargets[label] || 'Dashboard')
+  }
+
   const handleLogin = async (event: FormEvent) => {
     event.preventDefault()
 
@@ -360,11 +371,18 @@ export default function App() {
           <>
             <section className="stats-grid">
               {stats.map((stat) => (
-                <article className="card stat-card" key={stat.label}>
+                <button
+                  className="card stat-card stat-card-button"
+                  key={stat.label}
+                  type="button"
+                  onClick={() => goToDashboardArea(stat.label)}
+                  aria-label={`Abrir área de ${stat.label}`}
+                >
                   <span>{stat.label}</span>
                   <strong>{stat.value}</strong>
                   <small>{stat.change}</small>
-                </article>
+                  <em>Ver detalhes</em>
+                </button>
               ))}
             </section>
 
@@ -387,20 +405,20 @@ export default function App() {
                   <span className="chip neutral">{isLoadingDashboard ? 'A carregar...' : 'Hoje'}</span>
                 </div>
                 <div className="cash-summary">
-                  <div>
+                  <button type="button" className="cash-summary-link" onClick={() => setCurrentModule('Vendas')}>
                     <label>Entradas</label>
                     <strong>{dashboard ? formatMoney(dashboard.summary.salesMonth) : 'AOA 0,00'}</strong>
-                  </div>
-                  <div>
+                  </button>
+                  <button type="button" className="cash-summary-link" onClick={() => setCurrentModule('Financeiro')}>
                     <label>Saídas</label>
                     <strong>{dashboard ? formatMoney(dashboard.summary.totalExpenses) : 'AOA 0,00'}</strong>
-                  </div>
-                  <div>
+                  </button>
+                  <button type="button" className="cash-summary-link" onClick={() => setCurrentModule('Relatórios')}>
                     <label>Saldo</label>
                     <strong className="accent">
                       {dashboard ? formatMoney(dashboard.summary.estimatedProfit) : 'AOA 0,00'}
                     </strong>
-                  </div>
+                  </button>
                 </div>
               </article>
             </section>

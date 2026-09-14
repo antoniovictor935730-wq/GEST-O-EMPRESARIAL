@@ -356,6 +356,32 @@ button {
   gap: 8px;
 }
 
+.stat-card-button {
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.stat-card-button:hover,
+.stat-card-button:focus-visible {
+  transform: translateY(-4px);
+  border-color: rgba(45, 166, 201, 0.7);
+  box-shadow: 0 16px 32px rgba(0, 10, 18, 0.32);
+  outline: none;
+}
+
+.stat-card-button em {
+  color: #7ed0e5;
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
 .stat-card span {
   color: #93c5fd;
   font-size: 0.9rem;
@@ -434,6 +460,27 @@ button {
   border-radius: 12px;
   background: rgba(15, 118, 110, 0.05);
   border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.cash-summary-link {
+  display: grid;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 12px;
+  color: inherit;
+  text-align: left;
+  background: rgba(15, 118, 110, 0.05);
+  cursor: pointer;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.cash-summary-link:hover,
+.cash-summary-link:focus-visible {
+  border-color: rgba(45, 166, 201, 0.6);
+  background: rgba(12, 120, 153, 0.14);
+  outline: none;
+  transform: translateX(3px);
 }
 
 .cash-summary label {
