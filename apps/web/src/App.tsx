@@ -997,7 +997,7 @@ export default function App() {
     return (
       <div className="login-page">
         <div className="login-card">
-          <div className="login-brand">ERP</div>
+          <img className="login-logo" src="/logo.svg" alt="HEL Technology Service" />
           <h1>Entrar no painel</h1>
           <p>Gestão empresarial centralizada em um único ambiente.</p>
 
@@ -1171,7 +1171,7 @@ export default function App() {
       ) : null}
 
       <aside className="sidebar">
-        <div className="brand">ERP</div>
+        <div className="brand"><img src="/logo.svg" alt="HEL Technology Service" /></div>
         <nav>
           {moduleConfig.map((module) => (
             <button
@@ -1200,7 +1200,9 @@ export default function App() {
 
         {error ? <div className="error-box" style={{ marginBottom: '1rem' }}>{error}</div> : null}
 
-        {renderModuleContent()}
+        <div key={currentModule} className="module-transition">
+          {renderModuleContent()}
+        </div>
       </main>
     </div>
   )
