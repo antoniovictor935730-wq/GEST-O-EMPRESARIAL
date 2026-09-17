@@ -14,20 +14,10 @@ export class ReportsService {
 
   async sales(period?: string) {
     const now = new Date()
-    const startDate = new Date()
-
-    if (period === 'month') {
-      startDate.setDate(1)
-      startDate.setHours(0, 0, 0, 0)
-    } else if (period === 'year') {
-      startDate.setMonth(0, 1)
-      startDate.setHours(0, 0, 0, 0)
-    } else {
-      startDate.setDate(now.getDate() - 30)
-    }
+    const { startDate, endDate } = this.getPeriodDates(period, now)
 
     const sales = (await this.prisma.sale.findMany({
-      where: { date: { gte: startDate } },
+      where: { date: { gte: startDate, lt: endDate } },
       include: { client: true },
       orderBy: { date: 'asc' },
     })).map((sale: ReportSale) => ({ ...sale, total: Number(sale.total) }))
@@ -40,18 +30,20 @@ export class ReportsService {
   }
 
   async financial(period?: string) {
+    const { startDate, endDate } = this.getPeriodDates(period, new Date())
+    const dateFilter = { gte: startDate, lt: endDate }
     const expenses = (await this.prisma.expense.findMany({
-      where: period === 'month' ? { date: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) } } : undefined,
+      where: { date: dateFilter },
       orderBy: { date: 'asc' },
     })).map((expense: ReportExpense) => ({ ...expense, value: Number(expense.value) }))
 
     const revenues = (await this.prisma.revenue.findMany({
-      where: period === 'month' ? { date: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) } } : undefined,
+      where: { date: dateFilter },
       orderBy: { date: 'asc' },
     })).map((revenue: ReportRevenue) => ({ ...revenue, value: Number(revenue.value) }))
 
     const sales = (await this.prisma.sale.findMany({
-      where: period === 'month' ? { date: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) } } : undefined,
+      where: { date: dateFilter },
       orderBy: { date: 'asc' },
     })).map((sale: ReportSale) => ({ ...sale, total: Number(sale.total) }))
 
@@ -63,5 +55,28 @@ export class ReportsService {
       totalRevenues: revenues.reduce((sum: number, item: NormalizedReportRevenue) => sum + item.value, 0),
       totalSales: sales.reduce((sum: number, item: NormalizedReportSale) => sum + item.total, 0),
     }
+  }
+
+  private getPeriodDates(period: string | undefined, now: Date) {
+    const startDate = new Date(now)
+    const endDate = new Date(now)
+
+    if (period === 'day') {
+      startDate.setHours(0, 0, 0, 0)
+      endDate.setDate(endDate.getDate() + 1)
+      endDate.setHours(0, 0, 0, 0)
+    } else if (period === 'year') {
+      startDate.setMonth(0, 1)
+      startDate.setHours(0, 0, 0, 0)
+      endDate.setFullYear(endDate.getFullYear() + 1, 0, 1)
+      endDate.setHours(0, 0, 0, 0)
+    } else {
+      startDate.setDate(1)
+      startDate.setHours(0, 0, 0, 0)
+      endDate.setMonth(endDate.getMonth() + 1, 1)
+      endDate.setHours(0, 0, 0, 0)
+    }
+
+    return { startDate, endDate }
   }
 }

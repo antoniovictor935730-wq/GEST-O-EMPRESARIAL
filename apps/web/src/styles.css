@@ -263,6 +263,45 @@ button {
   transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
 }
 
+.primary-btn:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.report-download-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, rgba(7, 86, 117, 0.7), rgba(7, 37, 53, 0.92));
+}
+
+.report-download-card h2,
+.report-download-card p {
+  margin: 0;
+}
+
+.report-download-card p {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.eyebrow {
+  color: #7ed0e5;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.report-download-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .secondary-btn {
   border: 1px solid rgba(255, 16, 37, 0.55);
   border-radius: 8px;
@@ -611,6 +650,8 @@ button {
 }
 
 @media (max-width: 640px) {
+  .report-download-card { align-items: stretch; flex-direction: column; }
+  .report-download-actions { display: grid; grid-template-columns: 1fr; }
   .cash-chart-layout { flex-direction: column; gap: 24px; }
   .cash-chart-legend { grid-template-columns: repeat(3, 1fr); min-width: 100%; gap: 10px; }
   .legend-item { font-size: 0.78rem; }

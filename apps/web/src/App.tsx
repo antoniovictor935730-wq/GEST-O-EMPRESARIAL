@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { jsPDF } from 'jspdf'
 import {
   clearSession,
   CategoryRecord,
@@ -57,6 +58,14 @@ import {
 
 const formatMoney = (value: number) => `AOA ${value.toLocaleString('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
+type ReportPeriod = 'day' | 'month' | 'year'
+
+const reportPeriodLabels: Record<ReportPeriod, string> = {
+  day: 'Diário',
+  month: 'Mensal',
+  year: 'Anual',
+}
+
 const fallbackStats = [
   { label: 'Vendas do dia', value: 'AOA 0,00', change: '+0.0%' },
   { label: 'Vendas do mês', value: 'AOA 0,00', change: '+0.0%' },
@@ -108,6 +117,7 @@ export default function App() {
   const [password, setPassword] = useState('admin123')
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isDownloadingReport, setIsDownloadingReport] = useState<ReportPeriod | null>(null)
   const [isLoadingDashboard, setIsLoadingDashboard] = useState(false)
   const [activeForm, setActiveForm] = useState<'employee' | 'client' | 'product' | 'sale' | 'movement' | 'department' | 'position' | 'category' | 'supplier' | 'cashMovement' | 'cashClose' | 'expense' | 'settings' | null>(null)
   const [formData, setFormData] = useState<Record<string, string>>({})
@@ -302,6 +312,111 @@ export default function App() {
     setSession(null)
     setDashboard(null)
     setError('')
+  }
+
+  const handleDownloadReport = async (period: ReportPeriod) => {
+    if (!session) return
+
+    try {
+      setIsDownloadingReport(period)
+      setError('')
+      const [salesData, financialData] = await Promise.all([
+        getSalesReport(session.accessToken, period),
+        getFinancialReport(session.accessToken, period),
+      ])
+      const document = new jsPDF()
+      const companyName = companySettings?.companyName || 'Empresa'
+      const currency = companySettings?.currency || 'AOA'
+      const generatedAt = new Date().toLocaleString('pt-PT')
+      const money = (value: number) => `${currency} ${value.toLocaleString('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      let y = 52
+
+      document.setFillColor(6, 27, 40)
+      document.rect(0, 0, 210, 38, 'F')
+      document.setTextColor(255, 255, 255)
+      document.setFontSize(18)
+      document.text(companyName, 16, 16)
+      document.setFontSize(9)
+      document.text('RELATÓRIO DE GESTÃO EMPRESARIAL', 16, 25)
+      document.text(`Período: ${reportPeriodLabels[period]}`, 145, 16)
+      document.text(`Emitido em: ${generatedAt}`, 145, 23)
+
+      document.setTextColor(35, 45, 52)
+      document.setFontSize(10)
+      document.text(`NIF: ${companySettings?.nif || 'Não informado'}`, 16, y)
+      document.text(`Telefone: ${companySettings?.phone || 'Não informado'}`, 16, y + 6)
+      document.text(`Email: ${companySettings?.email || 'Não informado'}`, 16, y + 12)
+      document.text(`Endereço: ${companySettings?.address || 'Não informado'}`, 110, y)
+      document.text(`Website: ${companySettings?.website || 'Não informado'}`, 110, y + 6)
+
+      y += 28
+      document.setFillColor(231, 242, 246)
+      document.roundedRect(16, y - 6, 178, 24, 3, 3, 'F')
+      document.setFontSize(10)
+      document.text(`Vendas: ${money(Number(salesData.total || 0))}`, 22, y + 4)
+      document.text(`Receitas: ${money(Number(financialData.totalRevenues || 0))}`, 22, y + 12)
+      document.text(`Despesas: ${money(Number(financialData.totalExpenses || 0))}`, 105, y + 4)
+      document.text(`Resultado: ${money(Number(financialData.totalRevenues || 0) - Number(financialData.totalExpenses || 0))}`, 105, y + 12)
+
+      y += 34
+      document.setFontSize(12)
+      document.setTextColor(6, 86, 117)
+      document.text('Vendas realizadas', 16, y)
+      y += 8
+      document.setFontSize(9)
+      document.setTextColor(35, 45, 52)
+      document.text('Documento', 16, y)
+      document.text('Cliente', 48, y)
+      document.text('Data', 128, y)
+      document.text('Total', 170, y)
+      y += 5
+      document.setDrawColor(160, 180, 188)
+      document.line(16, y, 194, y)
+      y += 7
+
+      const salesRows = Array.isArray(salesData.data) ? salesData.data : []
+      if (salesRows.length === 0) {
+        document.text('Nenhuma venda registada no período.', 16, y)
+      } else {
+        salesRows.forEach((sale) => {
+          if (y > 274) {
+            document.addPage()
+            y = 20
+          }
+          document.text(String(sale.id).slice(0, 16), 16, y)
+          document.text((sale.client?.name || 'Cliente').slice(0, 38), 48, y)
+          document.text(sale.date ? new Date(sale.date).toLocaleDateString('pt-PT') : '—', 128, y)
+          document.text(money(Number(sale.total || 0)), 170, y)
+          y += 6
+        })
+      }
+
+      y += 12
+      if (y > 270) {
+        document.addPage()
+        y = 20
+      }
+      document.setFontSize(12)
+      document.setTextColor(6, 86, 117)
+      document.text('Resumo financeiro', 16, y)
+      y += 9
+      document.setFontSize(10)
+      document.setTextColor(35, 45, 52)
+      document.text(`Despesas: ${money(Number(financialData.totalExpenses || 0))}`, 16, y)
+      document.text(`Receitas: ${money(Number(financialData.totalRevenues || 0))}`, 16, y + 7)
+      document.text(`Vendas: ${money(Number(financialData.totalSales || 0))}`, 16, y + 14)
+      document.text(`Resultado líquido: ${money(Number(financialData.totalRevenues || 0) - Number(financialData.totalExpenses || 0))}`, 16, y + 21)
+      document.setFontSize(8)
+      document.setTextColor(100, 115, 122)
+      document.text('Documento emitido pelo sistema de gestão empresarial.', 16, 287)
+      document.save(`relatorio-${period}-${new Date().toISOString().slice(0, 10)}.pdf`)
+      setSalesReport(salesData)
+      setFinancialReport(financialData)
+    } catch (reportError) {
+      setError(reportError instanceof Error ? reportError.message : 'Não foi possível gerar o relatório PDF.')
+    } finally {
+      setIsDownloadingReport(null)
+    }
   }
 
   const openForm = (form: 'employee' | 'client' | 'product' | 'sale' | 'movement' | 'department' | 'position' | 'category' | 'supplier' | 'cashMovement' | 'cashClose' | 'expense' | 'settings', record?: Record<string, unknown>) => {
@@ -980,6 +1095,20 @@ export default function App() {
       case 'Relatórios':
         return (
           <>
+            <section className="card report-download-card">
+              <div>
+                <span className="eyebrow">Exportação empresarial</span>
+                <h2>Baixar relatório em PDF</h2>
+                <p>Escolha o período para gerar um documento com os dados da empresa.</p>
+              </div>
+              <div className="report-download-actions">
+                {(['day', 'month', 'year'] as ReportPeriod[]).map((period) => (
+                  <button type="button" className="primary-btn" key={period} onClick={() => handleDownloadReport(period)} disabled={isDownloadingReport !== null}>
+                    {isDownloadingReport === period ? 'A gerar...' : `Baixar ${reportPeriodLabels[period]}`}
+                  </button>
+                ))}
+              </div>
+            </section>
             <section className="stats-grid">
               <article className="card stat-card">
                 <span>Vendas</span>
