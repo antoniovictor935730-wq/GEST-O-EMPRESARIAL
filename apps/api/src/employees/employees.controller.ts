@@ -15,6 +15,11 @@ export class EmployeesController {
     return this.employeesService.getPayroll(month)
   }
 
+  @Get('payroll/annual')
+  async annual(@Query('year') year?: string) {
+    return this.employeesService.getAnnualPayroll(year)
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string) {
     return this.employeesService.findOne(id)
@@ -44,4 +49,10 @@ export class EmployeesController {
   async payment(@Body() dto: any) {
     return this.employeesService.createPayrollPayment(dto)
   }
+
+  @Post('payroll/bonus')
+  async bonus(@Body() dto: any) {
+    return this.employeesService.upsertPayrollBonus(dto)
+  }
+
 }

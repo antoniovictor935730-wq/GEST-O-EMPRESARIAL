@@ -114,6 +114,7 @@ model Employee {
   user              User?           @relation(fields: [userId], references: [id])
   attendance        Attendance[]
   payrollPayments   PayrollPayment[]
+  payrollAdjustments PayrollAdjustment[]
   vacationRequests Vacation[]
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
@@ -127,6 +128,7 @@ model Attendance {
   checkOut    DateTime?
   lateMinutes Int       @default(0)
   absence     Boolean   @default(false)
+  exitAmount  Decimal?  @db.Decimal(12, 2)
   workedHours Decimal?  @db.Decimal(5, 2)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -138,9 +140,22 @@ model PayrollPayment {
   employee   Employee @relation(fields: [employeeId], references: [id])
   month      String
   amount     Decimal  @db.Decimal(12, 2)
+  bonus      Decimal  @default(0) @db.Decimal(12, 2)
   paidAt     DateTime @default(now())
   notes      String?
   createdAt  DateTime @default(now())
+}
+
+model PayrollAdjustment {
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  month      String
+  bonus      Decimal  @default(0) @db.Decimal(12, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([employeeId, month])
 }
 
 model Vacation {

@@ -15,6 +15,7 @@ import {
   createEmployee,
   createEmployeeAttendance,
   createPayrollPayment,
+  createPayrollBonus,
   createProduct,
   createSale,
   createStockMovement,
@@ -38,6 +39,8 @@ import {
   getLowStock,
   getProducts,
   getPayrollSummary,
+  getAnnualPayroll,
+  resetOperationalData,
   getPositions,
   getSuppliers,
   getSales,
@@ -80,6 +83,7 @@ const fallbackStats = [
 const moduleConfig = [
   'Dashboard',
   'Funcionários',
+  'Recursos Humanos',
   'Pagamentos',
   'Departamentos',
   'Posições',
@@ -103,6 +107,8 @@ export default function App() {
   const [employees, setEmployees] = useState<EmployeeRecord[]>([])
   const [payroll, setPayroll] = useState<PayrollSummary | null>(null)
   const [payrollMonth, setPayrollMonth] = useState(new Date().toISOString().slice(0, 7))
+  const [annualPayroll, setAnnualPayroll] = useState<Array<{ month: string; paid: boolean; total: number }>>([])
+  const [payrollYear, setPayrollYear] = useState(String(new Date().getFullYear()))
   const [clients, setClients] = useState<ClientRecord[]>([])
   const [products, setProducts] = useState<ProductRecord[]>([])
   const [sales, setSales] = useState<SaleRecord[]>([])
@@ -126,7 +132,7 @@ export default function App() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isDownloadingReport, setIsDownloadingReport] = useState<ReportPeriod | null>(null)
   const [isLoadingDashboard, setIsLoadingDashboard] = useState(false)
-  const [activeForm, setActiveForm] = useState<'employee' | 'client' | 'product' | 'sale' | 'movement' | 'department' | 'position' | 'category' | 'supplier' | 'cashMovement' | 'cashClose' | 'expense' | 'settings' | 'attendance' | 'payrollPayment' | null>(null)
+  const [activeForm, setActiveForm] = useState<'employee' | 'client' | 'product' | 'sale' | 'movement' | 'department' | 'position' | 'category' | 'supplier' | 'cashMovement' | 'cashClose' | 'expense' | 'settings' | 'attendance' | 'payrollPayment' | 'payrollBonus' | null>(null)
   const [formData, setFormData] = useState<Record<string, string>>({})
   const [editingId, setEditingId] = useState<string | null>(null)
 
@@ -172,7 +178,7 @@ export default function App() {
 
     const loadModuleData = async () => {
       try {
-        const [nextEmployees, nextClients, nextProducts, nextDepartments, nextPositions, nextCategories, nextSuppliers, nextCashSummary, nextCompanySettings, nextStockSummary, nextLowStock, nextStockHistory, nextFinanceSummary, nextFinanceEntries, nextSales, nextSalesReport, nextFinancialReport, nextPayroll] = await Promise.all([
+        const [nextEmployees, nextClients, nextProducts, nextDepartments, nextPositions, nextCategories, nextSuppliers, nextCashSummary, nextCompanySettings, nextStockSummary, nextLowStock, nextStockHistory, nextFinanceSummary, nextFinanceEntries, nextSales, nextSalesReport, nextFinancialReport, nextPayroll, nextAnnualPayroll] = await Promise.all([
           getEmployees(session.accessToken),
           getClients(session.accessToken),
           getProducts(session.accessToken),
@@ -191,6 +197,7 @@ export default function App() {
           getSalesReport(session.accessToken, 'month'),
           getFinancialReport(session.accessToken, 'month'),
           getPayrollSummary(session.accessToken, payrollMonth),
+          getAnnualPayroll(session.accessToken, payrollYear),
         ])
 
         setEmployees(nextEmployees)
@@ -211,6 +218,7 @@ export default function App() {
         setSalesReport(nextSalesReport)
         setFinancialReport(nextFinancialReport)
         setPayroll(nextPayroll)
+        setAnnualPayroll(nextAnnualPayroll)
       } catch (moduleError) {
         console.error(moduleError)
       }
@@ -218,7 +226,7 @@ export default function App() {
 
     loadDashboard()
     loadModuleData()
-  }, [session, currentModule, payrollMonth])
+  }, [session, currentModule, payrollMonth, payrollYear])
 
   const stats = useMemo(() => {
     if (!dashboard) {
@@ -322,6 +330,19 @@ export default function App() {
     setSession(null)
     setDashboard(null)
     setError('')
+  }
+
+  const handleResetOperationalData = async () => {
+    const confirmed = window.confirm('Atenção: esta ação apagará funcionários, vendas, clientes, produtos, stock, finanças, pagamentos e todos os registos operacionais. Os dados da empresa e o acesso serão preservados. Deseja continuar?')
+    if (!confirmed || !window.confirm('Confirma definitivamente a limpeza de todos os dados operacionais?')) return
+
+    try {
+      setError('')
+      await resetOperationalData(session!.accessToken)
+      window.location.reload()
+    } catch (resetError) {
+      setError(resetError instanceof Error ? resetError.message : 'Não foi possível reiniciar os dados.')
+    }
   }
 
   const handleDownloadReport = async (period: ReportPeriod) => {
@@ -429,7 +450,7 @@ export default function App() {
     }
   }
 
-  const openForm = (form: 'employee' | 'client' | 'product' | 'sale' | 'movement' | 'department' | 'position' | 'category' | 'supplier' | 'cashMovement' | 'cashClose' | 'expense' | 'settings' | 'attendance' | 'payrollPayment', record?: Record<string, unknown>) => {
+  const openForm = (form: 'employee' | 'client' | 'product' | 'sale' | 'movement' | 'department' | 'position' | 'category' | 'supplier' | 'cashMovement' | 'cashClose' | 'expense' | 'settings' | 'attendance' | 'payrollPayment' | 'payrollBonus', record?: Record<string, unknown>) => {
     setError('')
     setFormData(record ? Object.fromEntries(Object.entries(record).map(([key, value]) => [key, String(value ?? '')])) : {})
     setEditingId(record?.id ? String(record.id) : null)
@@ -457,6 +478,9 @@ export default function App() {
         setPayroll(await getPayrollSummary(session!.accessToken, payrollMonth))
       } else if (activeForm === 'payrollPayment') {
         await createPayrollPayment(session!.accessToken, formData)
+        setPayroll(await getPayrollSummary(session!.accessToken, payrollMonth))
+      } else if (activeForm === 'payrollBonus') {
+        await createPayrollBonus(session!.accessToken, formData)
         setPayroll(await getPayrollSummary(session!.accessToken, payrollMonth))
       } else if (activeForm === 'department') {
         if (editingId) await updateResource(session!.accessToken, `departments/${editingId}`, formData)
@@ -702,6 +726,41 @@ export default function App() {
           </section>
         )
 
+      case 'Recursos Humanos':
+        return (
+          <>
+            <section className="card hr-header-card">
+              <div>
+                <span className="eyebrow">Gestão de pessoas</span>
+                <h2>Recursos Humanos</h2>
+                <p className="module-subtitle">Central de funcionários, assiduidade, bônus e pagamentos, sincronizada com o Dashboard.</p>
+              </div>
+              <label className="month-filter">Mês da gestão<input type="month" value={payrollMonth} onChange={(event) => setPayrollMonth(event.target.value)} /></label>
+            </section>
+            <section className="stats-grid">
+              <article className="card stat-card"><span>Funcionários ativos</span><strong>{employees.filter((employee) => employee.status === 'ACTIVE').length}</strong><small>Registos ativos</small></article>
+              <article className="card stat-card"><span>Folha líquida</span><strong>{formatMoney(payroll?.totalNet || 0)}</strong><small>{payroll?.totalAbsences || 0} saídas/faltas</small></article>
+              <article className="card stat-card"><span>Pagamentos pendentes</span><strong>{payroll?.rows.filter((row) => !row.isPaid).length || 0}</strong><small>Período selecionado</small></article>
+            </section>
+            <section className="card hr-action-card">
+              <div><h2>Ações rápidas</h2><p className="module-subtitle">Insira os dados diretamente nesta área.</p></div>
+              <div className="hr-action-grid">
+                <button type="button" className="primary-btn" onClick={() => openForm('employee')}>Novo funcionário</button>
+                <button type="button" className="secondary-btn" onClick={() => openForm('attendance')}>Registrar saída/falta</button>
+                <button type="button" className="secondary-btn" onClick={() => setCurrentModule('Pagamentos')}>Abrir pagamentos</button>
+                <button type="button" className="secondary-btn" onClick={() => openForm('payrollBonus')}>Registrar bônus</button>
+              </div>
+            </section>
+            <section className="card module-card">
+              <div className="section-heading"><div><h2>Resumo da equipa</h2><p className="module-subtitle">Valores do mês {payrollMonth} em tempo real.</p></div><button type="button" className="primary-btn" onClick={() => setCurrentModule('Pagamentos')}>Gerir folha completa</button></div>
+              <table>
+                <thead><tr><th>Funcionário</th><th>Salário</th><th>Bônus</th><th>Saídas</th><th>A receber</th><th>Ações</th></tr></thead>
+                <tbody>{payroll?.rows.length ? payroll.rows.map((row) => <tr key={row.employeeId}><td><strong>{row.fullName}</strong><small className="table-secondary">{row.employeeCode} · {row.position || 'Sem posição'}</small></td><td>{formatMoney(row.salary)}</td><td>{formatMoney(row.bonus)}</td><td>{row.absences} · {formatMoney(row.exitDiscount)}</td><td><strong>{formatMoney(row.netSalary)}</strong></td><td className="row-actions"><button type="button" onClick={() => openForm('payrollBonus', { employeeId: row.employeeId, month: payrollMonth, bonus: String(row.bonus) })}>Bônus</button>{!row.isPaid && <button type="button" onClick={() => openForm('payrollPayment', { employeeId: row.employeeId, month: payrollMonth, amount: String(row.netSalary) })}>Pagar</button>}</td></tr>) : <tr><td colSpan={6}>Sem funcionários ativos neste período.</td></tr>}</tbody>
+              </table>
+            </section>
+          </>
+        )
+
       case 'Pagamentos':
         return (
           <>
@@ -722,21 +781,26 @@ export default function App() {
                 </div>
               </div>
               <table>
-                <thead><tr><th>Funcionário</th><th>Salário base</th><th>Bônus</th><th>Saídas/faltas</th><th>Desconto</th><th>A receber</th><th>Pagamento</th></tr></thead>
+                <thead><tr><th>Funcionário</th><th>Salário base</th><th>Bônus</th><th>Saídas</th><th>Desconto</th><th>A receber</th><th>Pagamento</th></tr></thead>
                 <tbody>
                   {payroll?.rows.length ? payroll.rows.map((row) => (
                     <tr key={row.employeeId}>
                       <td><strong>{row.fullName}</strong><small className="table-secondary">{row.employeeCode} · {row.position || 'Sem posição'}</small></td>
                       <td>{formatMoney(row.salary)}</td>
                       <td>{formatMoney(row.bonus)}</td>
-                      <td>{row.absences}</td>
+                      <td>{row.absences} · {formatMoney(row.exitDiscount)}</td>
                       <td>{formatMoney(row.discount)}</td>
                       <td><strong>{formatMoney(row.netSalary)}</strong></td>
-                      <td className="row-actions"><span className={row.isPaid ? 'badge success' : 'badge warning'}>{row.isPaid ? 'Pago' : 'Pendente'}</span>{!row.isPaid && <button type="button" onClick={() => openForm('payrollPayment', { employeeId: row.employeeId, month: payrollMonth, amount: String(row.netSalary) })}>Pagar</button>}</td>
+                      <td className="row-actions"><span className={row.isPaid ? 'badge success' : 'badge warning'}>{row.isPaid ? 'Pago' : 'Pendente'}</span><button type="button" onClick={() => openForm('payrollBonus', { employeeId: row.employeeId, month: payrollMonth, bonus: String(row.bonus) })}>Bônus</button>{!row.isPaid && <button type="button" onClick={() => openForm('payrollPayment', { employeeId: row.employeeId, month: payrollMonth, amount: String(row.netSalary) })}>Pagar</button>}</td>
                     </tr>
                   )) : <tr><td colSpan={7}>Sem funcionários ativos ou registos para este mês.</td></tr>}
                 </tbody>
               </table>
+            </section>
+            <section className="card module-card annual-payroll-card">
+              <div className="section-heading"><div><h2>Folha anual</h2><p className="module-subtitle">Acompanhe os meses pagos e os totais acumulados.</p></div><label className="month-filter">Ano<input type="number" min="2000" max="2100" value={payrollYear} onChange={(event) => setPayrollYear(event.target.value)} /></label></div>
+              <div className="annual-payroll-chart">{annualPayroll.map((month) => <div className="annual-month" key={month.month} title={`${month.month}: ${formatMoney(month.total)}`}><div className="annual-bar-track"><div className={`annual-bar ${month.paid ? 'paid' : ''}`} style={{ height: `${Math.max(8, Math.min(100, month.total > 0 ? (month.total / Math.max(...annualPayroll.map((item) => item.total), 1)) * 100 : 8))}%` }} /></div><strong>{month.month.slice(5)}</strong><small>{month.paid ? 'Pago' : 'Pendente'}</small></div>)}</div>
+              <div className="payroll-calendar">{annualPayroll.map((month) => <div className={`calendar-month ${month.paid ? 'paid' : ''}`} key={month.month}><strong>{new Date(`${month.month}-01T00:00:00`).toLocaleDateString('pt-PT', { month: 'short' }).replace('.', '')}</strong><span>{month.paid ? 'Pago' : 'Em aberto'}</span></div>)}</div>
             </section>
           </>
         )
@@ -1256,6 +1320,7 @@ export default function App() {
 
       case 'Configurações':
         return (
+          <>
           <section className="card module-card">
             <div className="section-heading"><h2>Configurações da empresa</h2><button type="button" className="primary-btn" onClick={() => openForm('settings', companySettings as unknown as Record<string, unknown>)}>Editar dados</button></div>
             <table><tbody>
@@ -1267,6 +1332,14 @@ export default function App() {
               <tr><th>Moeda</th><td>{companySettings?.currency || 'AOA'}</td></tr>
             </tbody></table>
           </section>
+          <section className="card module-card danger-settings-card">
+            <div>
+              <h2>Reiniciar sistema</h2>
+              <p className="module-subtitle">Apaga os dados operacionais e deixa o sistema pronto para começar novamente. O acesso e os dados da empresa serão mantidos.</p>
+            </div>
+            <button type="button" className="danger-btn" onClick={handleResetOperationalData}>Limpar todos os dados</button>
+          </section>
+          </>
         )
 
       default:
@@ -1320,7 +1393,7 @@ export default function App() {
         <div className="modal-backdrop" role="presentation">
           <form className="modal-card" onSubmit={handleCreate}>
             <div className="section-heading">
-              <h2>{activeForm === 'employee' ? 'Novo funcionário' : activeForm === 'client' ? 'Novo cliente' : activeForm === 'product' ? 'Adicionar produto' : activeForm === 'department' ? 'Novo departamento' : activeForm === 'position' ? 'Nova posição' : activeForm === 'category' ? 'Nova categoria' : activeForm === 'supplier' ? 'Novo fornecedor' : activeForm === 'cashMovement' ? 'Novo movimento de caixa' : activeForm === 'cashClose' ? 'Fechar dia' : activeForm === 'expense' ? 'Nova despesa' : activeForm === 'settings' ? 'Configurações da empresa' : activeForm === 'sale' ? 'Nova venda' : activeForm === 'attendance' ? 'Registrar saída/falta' : activeForm === 'payrollPayment' ? 'Registrar pagamento' : 'Nova movimentação'}</h2>
+              <h2>{activeForm === 'employee' ? 'Novo funcionário' : activeForm === 'client' ? 'Novo cliente' : activeForm === 'product' ? 'Adicionar produto' : activeForm === 'department' ? 'Novo departamento' : activeForm === 'position' ? 'Nova posição' : activeForm === 'category' ? 'Nova categoria' : activeForm === 'supplier' ? 'Novo fornecedor' : activeForm === 'cashMovement' ? 'Novo movimento de caixa' : activeForm === 'cashClose' ? 'Fechar dia' : activeForm === 'expense' ? 'Nova despesa' : activeForm === 'settings' ? 'Configurações da empresa' : activeForm === 'sale' ? 'Nova venda' : activeForm === 'attendance' ? 'Registrar saída/falta' : activeForm === 'payrollPayment' ? 'Registrar pagamento' : activeForm === 'payrollBonus' ? 'Registrar bônus do mês' : 'Nova movimentação'}</h2>
               <button type="button" className="icon-btn" onClick={closeForm} aria-label="Fechar formulário">×</button>
             </div>
 
@@ -1331,7 +1404,6 @@ export default function App() {
                 <label>Email<input type="email" value={formData.email || ''} onChange={(event) => setFormData({ ...formData, email: event.target.value })} /></label>
                 <label>Telefone<input value={formData.phone || ''} onChange={(event) => setFormData({ ...formData, phone: event.target.value })} /></label>
                 <label>Salário base<input type="number" min="0" step="0.01" value={formData.salary || ''} onChange={(event) => setFormData({ ...formData, salary: event.target.value })} /></label>
-                <label>Bônus salarial mensal<input type="number" min="0" step="0.01" value={formData.salaryBonus || '0'} onChange={(event) => setFormData({ ...formData, salaryBonus: event.target.value })} /></label>
                 <label>Departamento
                   <select value={formData.departmentId || ''} onChange={(event) => setFormData({ ...formData, departmentId: event.target.value })}>
                     <option value="">Sem departamento</option>
@@ -1351,6 +1423,7 @@ export default function App() {
               <>
                 <label>Funcionário<select required value={formData.employeeId || ''} onChange={(event) => setFormData({ ...formData, employeeId: event.target.value })}><option value="">Selecione</option>{employees.filter((employee) => employee.status === 'ACTIVE').map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName}</option>)}</select></label>
                 <label>Data da saída<input required type="datetime-local" value={formData.checkOut || ''} onChange={(event) => setFormData({ ...formData, checkOut: event.target.value })} /></label>
+                <label>Valor da saída<input type="number" min="0" step="0.01" value={formData.exitAmount || '0'} onChange={(event) => setFormData({ ...formData, exitAmount: event.target.value })} /></label>
                 <label className="checkbox-field"><input type="checkbox" checked={formData.absence === 'true'} onChange={(event) => setFormData({ ...formData, absence: String(event.target.checked) })} /> Considerar como falta para desconto</label>
               </>
             ) : null}
@@ -1360,6 +1433,14 @@ export default function App() {
                 <label>Mês<input required type="month" value={formData.month || payrollMonth} onChange={(event) => setFormData({ ...formData, month: event.target.value })} /></label>
                 <label>Valor pago<input required type="number" min="0" step="0.01" value={formData.amount || ''} onChange={(event) => setFormData({ ...formData, amount: event.target.value })} /></label>
                 <label>Observação<input value={formData.notes || ''} onChange={(event) => setFormData({ ...formData, notes: event.target.value })} /></label>
+              </>
+            ) : null}
+
+            {activeForm === 'payrollBonus' ? (
+              <>
+                <label>Funcionário<select required value={formData.employeeId || ''} onChange={(event) => setFormData({ ...formData, employeeId: event.target.value })}><option value="">Selecione</option>{employees.filter((employee) => employee.status === 'ACTIVE').map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName}</option>)}</select></label>
+                <label>Mês<input required type="month" value={formData.month || payrollMonth} onChange={(event) => setFormData({ ...formData, month: event.target.value })} /></label>
+                <label>Bônus do mês<input required type="number" min="0" step="0.01" value={formData.bonus || '0'} onChange={(event) => setFormData({ ...formData, bonus: event.target.value })} /></label>
               </>
             ) : null}
 

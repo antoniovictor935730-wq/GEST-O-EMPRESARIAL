@@ -43,17 +43,19 @@ export class EmployeesService {
     const endDate = new Date(year, monthNumber, 1)
     const employees = await this.prisma.employee.findMany({
       where: { status: 'ACTIVE' },
-      include: { attendance: { where: { createdAt: { gte: startDate, lt: endDate } } }, payrollPayments: { where: { month: selectedMonth } }, department: true, position: true },
+      include: { attendance: { where: { createdAt: { gte: startDate, lt: endDate } } }, payrollPayments: { where: { month: selectedMonth } }, payrollAdjustments: { where: { month: selectedMonth } }, department: true, position: true },
       orderBy: { fullName: 'asc' },
     })
     const rows = employees.map((employee) => {
       const salary = Number(employee.salary || 0)
-      const bonus = Number(employee.salaryBonus || 0)
+      const bonus = employee.payrollAdjustments.reduce((sum, adjustment) => sum + Number(adjustment.bonus), 0)
       const absences = employee.attendance.filter((record) => record.absence).length
-      const discount = (salary / 30) * absences
+      const absenceDiscount = (salary / 30) * absences
+      const exitDiscount = employee.attendance.reduce((sum, record) => sum + Number(record.exitAmount || 0), 0)
+      const discount = absenceDiscount + exitDiscount
       const netSalary = Math.max(0, salary + bonus - discount)
       const paidAmount = employee.payrollPayments.reduce((sum, payment) => sum + Number(payment.amount), 0)
-      return { employeeId: employee.id, employeeCode: employee.employeeCode, fullName: employee.fullName, department: employee.department?.name || null, position: employee.position?.name || null, salary, bonus, absences, discount, netSalary, paidAmount, isPaid: paidAmount >= netSalary }
+      return { employeeId: employee.id, employeeCode: employee.employeeCode, fullName: employee.fullName, department: employee.department?.name || null, position: employee.position?.name || null, salary, bonus, absences, exitDiscount, discount, netSalary, paidAmount, isPaid: paidAmount >= netSalary }
     })
     return {
       month: selectedMonth,
@@ -73,6 +75,7 @@ export class EmployeesService {
         checkOut: data.checkOut ? new Date(data.checkOut) : new Date(),
         checkIn: data.checkIn ? new Date(data.checkIn) : null,
         lateMinutes: Number(data.lateMinutes || 0),
+        exitAmount: data.exitAmount ? Number(data.exitAmount) : 0,
       },
     })
   }
@@ -83,8 +86,27 @@ export class EmployeesService {
         employeeId: data.employeeId,
         month: data.month,
         amount: Number(data.amount),
+        bonus: data.bonus ? Number(data.bonus) : 0,
         notes: data.notes,
       },
+    })
+  }
+
+  async upsertPayrollBonus(data: any) {
+    return this.prisma.payrollAdjustment.upsert({
+      where: { employeeId_month: { employeeId: data.employeeId, month: data.month } },
+      update: { bonus: Number(data.bonus || 0) },
+      create: { employeeId: data.employeeId, month: data.month, bonus: Number(data.bonus || 0) },
+    })
+  }
+
+  async getAnnualPayroll(year?: string) {
+    const selectedYear = /^\d{4}$/.test(year || '') ? Number(year) : new Date().getFullYear()
+    const payments = await this.prisma.payrollPayment.findMany({ where: { month: { startsWith: `${selectedYear}-` } } })
+    return Array.from({ length: 12 }, (_, index) => {
+      const month = `${selectedYear}-${String(index + 1).padStart(2, '0')}`
+      const monthPayments = payments.filter((payment) => payment.month === month)
+      return { month, paid: monthPayments.length > 0, total: monthPayments.reduce((sum, payment) => sum + Number(payment.amount), 0) }
     })
   }
 

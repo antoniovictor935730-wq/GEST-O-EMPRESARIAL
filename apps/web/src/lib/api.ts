@@ -65,6 +65,7 @@ export type PayrollSummary = {
     bonus: number
     absences: number
     discount: number
+    exitDiscount: number
     netSalary: number
     paidAmount: number
     isPaid: boolean
@@ -305,12 +306,34 @@ export async function getPayrollSummary(token: string, month: string): Promise<P
   return payload as PayrollSummary
 }
 
+export async function resetOperationalData(token: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/system/reset-data`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+  })
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(payload.message || 'Não foi possível reiniciar os dados.')
+}
+
 export async function createEmployeeAttendance(token: string, data: Record<string, string>) {
   return createResource(token, 'employees/attendance', data)
 }
 
 export async function createPayrollPayment(token: string, data: Record<string, string>) {
   return createResource(token, 'employees/payroll/payment', data)
+}
+
+export async function createPayrollBonus(token: string, data: Record<string, string>) {
+  return createResource(token, 'employees/payroll/bonus', data)
+}
+
+export async function getAnnualPayroll(token: string, year: string): Promise<Array<{ month: string; paid: boolean; total: number }>> {
+  const response = await fetch(`${API_BASE_URL}/employees/payroll/annual?year=${encodeURIComponent(year)}`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+  })
+  const payload = await response.json().catch(() => [])
+  if (!response.ok) throw new Error('Erro ao carregar resumo anual da folha.')
+  return payload as Array<{ month: string; paid: boolean; total: number }>
 }
 
 async function createResource<T>(token: string, path: string, data: unknown): Promise<T> {

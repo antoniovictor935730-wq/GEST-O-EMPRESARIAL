@@ -50,13 +50,13 @@ export class DashboardService {
         where: { status: 'ACTIVE' },
         select: {
           salary: true,
-          salaryBonus: true,
-          attendance: { where: { createdAt: { gte: startOfMonth, lt: new Date(now.getFullYear(), now.getMonth() + 1, 1) }, absence: true } },
+          attendance: { where: { createdAt: { gte: startOfMonth, lt: new Date(now.getFullYear(), now.getMonth() + 1, 1) } } },
+          payrollAdjustments: { where: { month: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}` } },
         },
       }),
     ])
-    const payrollGross = payrollEmployees.reduce((sum, employee) => sum + Number(employee.salary || 0) + Number(employee.salaryBonus || 0), 0)
-    const payrollDiscounts = payrollEmployees.reduce((sum, employee) => sum + (Number(employee.salary || 0) / 30) * employee.attendance.length, 0)
+    const payrollGross = payrollEmployees.reduce((sum, employee) => sum + Number(employee.salary || 0) + employee.payrollAdjustments.reduce((bonusSum, adjustment) => bonusSum + Number(adjustment.bonus), 0), 0)
+    const payrollDiscounts = payrollEmployees.reduce((sum, employee) => sum + (Number(employee.salary || 0) / 30) * employee.attendance.filter((record) => record.absence).length + employee.attendance.reduce((exitSum, record) => exitSum + Number(record.exitAmount || 0), 0), 0)
 
     return {
       period,
