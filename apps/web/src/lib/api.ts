@@ -32,6 +32,10 @@ export type DashboardSummary = {
     products: number
     lowStock: number
     salesCount: number
+    payrollGross: number
+    payrollDiscounts: number
+    payrollNet: number
+    payrollAbsences: number
   }
   recent: {
     sales: Array<{
@@ -49,6 +53,26 @@ export type DashboardSummary = {
   }
 }
 
+export type PayrollSummary = {
+  month: string
+  rows: Array<{
+    employeeId: string
+    employeeCode: string
+    fullName: string
+    department?: string | null
+    position?: string | null
+    salary: number
+    bonus: number
+    absences: number
+    discount: number
+    netSalary: number
+  }>
+  totalGross: number
+  totalDiscounts: number
+  totalNet: number
+  totalAbsences: number
+}
+
 export type EmployeeRecord = {
   id: string
   employeeCode: string
@@ -56,6 +80,8 @@ export type EmployeeRecord = {
   email?: string | null
   phone?: string | null
   status?: string
+  salary?: number | string | null
+  salaryBonus?: number | string | null
   departmentId?: string | null
   positionId?: string | null
   department?: { name?: string } | null
@@ -189,6 +215,7 @@ export type ReportSummary = {
   totalExpenses?: number
   totalRevenues?: number
   totalSales?: number
+  profit?: number
   expenses?: FinanceEntry[]
   revenues?: FinanceEntry[]
   sales?: Array<{ id: string; total: number; date?: string; client?: { name?: string } }>
@@ -265,6 +292,15 @@ export async function getEmployees(token: string): Promise<EmployeeRecord[]> {
   }
 
   return Array.isArray(payload) ? payload : []
+}
+
+export async function getPayrollSummary(token: string, month: string): Promise<PayrollSummary> {
+  const response = await fetch(`${API_BASE_URL}/employees/payroll/summary?month=${encodeURIComponent(month)}`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+  })
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(payload.message || 'Erro ao carregar pagamentos.')
+  return payload as PayrollSummary
 }
 
 async function createResource<T>(token: string, path: string, data: unknown): Promise<T> {

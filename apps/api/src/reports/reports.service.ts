@@ -47,13 +47,18 @@ export class ReportsService {
       orderBy: { date: 'asc' },
     })).map((sale: ReportSale) => ({ ...sale, total: Number(sale.total) }))
 
+    const totalExpenses = expenses.reduce((sum: number, item: NormalizedReportExpense) => sum + item.value, 0)
+    const totalRevenues = revenues.reduce((sum: number, item: NormalizedReportRevenue) => sum + item.value, 0)
+    const totalSales = sales.reduce((sum: number, item: NormalizedReportSale) => sum + item.total, 0)
+
     return {
       expenses,
       revenues,
       sales,
-      totalExpenses: expenses.reduce((sum: number, item: NormalizedReportExpense) => sum + item.value, 0),
-      totalRevenues: revenues.reduce((sum: number, item: NormalizedReportRevenue) => sum + item.value, 0),
-      totalSales: sales.reduce((sum: number, item: NormalizedReportSale) => sum + item.total, 0),
+      totalExpenses,
+      totalRevenues,
+      totalSales,
+      profit: totalSales - totalExpenses,
     }
   }
 

@@ -35,6 +35,7 @@ import {
   getFinancialReport,
   getLowStock,
   getProducts,
+  getPayrollSummary,
   getPositions,
   getSuppliers,
   getSales,
@@ -45,6 +46,7 @@ import {
   loginRequest,
   ProductRecord,
   PositionRecord,
+  PayrollSummary,
   ReportSummary,
   SaleRecord,
   saveSession,
@@ -76,6 +78,7 @@ const fallbackStats = [
 const moduleConfig = [
   'Dashboard',
   'Funcionários',
+  'Pagamentos',
   'Departamentos',
   'Posições',
   'Clientes',
@@ -96,6 +99,8 @@ export default function App() {
   const [session, setSession] = useState<SessionState | null>(null)
   const [dashboard, setDashboard] = useState<DashboardSummary | null>(null)
   const [employees, setEmployees] = useState<EmployeeRecord[]>([])
+  const [payroll, setPayroll] = useState<PayrollSummary | null>(null)
+  const [payrollMonth, setPayrollMonth] = useState(new Date().toISOString().slice(0, 7))
   const [clients, setClients] = useState<ClientRecord[]>([])
   const [products, setProducts] = useState<ProductRecord[]>([])
   const [sales, setSales] = useState<SaleRecord[]>([])
@@ -134,6 +139,7 @@ export default function App() {
     if (!session) {
       setDashboard(null)
       setEmployees([])
+      setPayroll(null)
       setClients([])
       setProducts([])
       setSales([])
@@ -164,7 +170,7 @@ export default function App() {
 
     const loadModuleData = async () => {
       try {
-        const [nextEmployees, nextClients, nextProducts, nextDepartments, nextPositions, nextCategories, nextSuppliers, nextCashSummary, nextCompanySettings, nextStockSummary, nextLowStock, nextStockHistory, nextFinanceSummary, nextFinanceEntries, nextSales, nextSalesReport, nextFinancialReport] = await Promise.all([
+        const [nextEmployees, nextClients, nextProducts, nextDepartments, nextPositions, nextCategories, nextSuppliers, nextCashSummary, nextCompanySettings, nextStockSummary, nextLowStock, nextStockHistory, nextFinanceSummary, nextFinanceEntries, nextSales, nextSalesReport, nextFinancialReport, nextPayroll] = await Promise.all([
           getEmployees(session.accessToken),
           getClients(session.accessToken),
           getProducts(session.accessToken),
@@ -182,6 +188,7 @@ export default function App() {
           getSales(session.accessToken),
           getSalesReport(session.accessToken, 'month'),
           getFinancialReport(session.accessToken, 'month'),
+          getPayrollSummary(session.accessToken, payrollMonth),
         ])
 
         setEmployees(nextEmployees)
@@ -201,6 +208,7 @@ export default function App() {
         setSales(nextSales)
         setSalesReport(nextSalesReport)
         setFinancialReport(nextFinancialReport)
+        setPayroll(nextPayroll)
       } catch (moduleError) {
         console.error(moduleError)
       }
@@ -208,7 +216,7 @@ export default function App() {
 
     loadDashboard()
     loadModuleData()
-  }, [session, currentModule])
+  }, [session, currentModule, payrollMonth])
 
   const stats = useMemo(() => {
     if (!dashboard) {
@@ -356,7 +364,7 @@ export default function App() {
       document.text(`Vendas: ${money(Number(salesData.total || 0))}`, 22, y + 4)
       document.text(`Receitas: ${money(Number(financialData.totalRevenues || 0))}`, 22, y + 12)
       document.text(`Despesas: ${money(Number(financialData.totalExpenses || 0))}`, 105, y + 4)
-      document.text(`Resultado: ${money(Number(financialData.totalRevenues || 0) - Number(financialData.totalExpenses || 0))}`, 105, y + 12)
+      document.text(`Resultado: ${money(Number(financialData.profit ?? (financialData.totalSales || 0) - (financialData.totalExpenses || 0)))}`, 105, y + 12)
 
       y += 34
       document.setFontSize(12)
@@ -405,7 +413,7 @@ export default function App() {
       document.text(`Despesas: ${money(Number(financialData.totalExpenses || 0))}`, 16, y)
       document.text(`Receitas: ${money(Number(financialData.totalRevenues || 0))}`, 16, y + 7)
       document.text(`Vendas: ${money(Number(financialData.totalSales || 0))}`, 16, y + 14)
-      document.text(`Resultado líquido: ${money(Number(financialData.totalRevenues || 0) - Number(financialData.totalExpenses || 0))}`, 16, y + 21)
+      document.text(`Resultado líquido: ${money(Number(financialData.profit ?? (financialData.totalSales || 0) - (financialData.totalExpenses || 0)))}`, 16, y + 21)
       document.setFontSize(8)
       document.setTextColor(100, 115, 122)
       document.text('Documento emitido pelo sistema de gestão empresarial.', 16, 287)
@@ -572,6 +580,11 @@ export default function App() {
                       {dashboard ? formatMoney(dashboard.summary.estimatedProfit) : 'AOA 0,00'}
                     </strong>
                   </button>
+                  <button type="button" className="cash-summary-link" onClick={() => setCurrentModule('Pagamentos')}>
+                    <label>Folha a pagar</label>
+                    <strong>{dashboard ? formatMoney(dashboard.summary.payrollNet) : 'AOA 0,00'}</strong>
+                    <small>{dashboard?.summary.payrollAbsences || 0} saídas/faltas no mês</small>
+                  </button>
                 </div>
               </article>
             </section>
@@ -679,6 +692,41 @@ export default function App() {
               </tbody>
             </table>
           </section>
+        )
+
+      case 'Pagamentos':
+        return (
+          <>
+            <section className="stats-grid">
+              <article className="card stat-card"><span>Folha bruta</span><strong>{formatMoney(payroll?.totalGross || 0)}</strong><small>Mês selecionado</small></article>
+              <article className="card stat-card"><span>Descontos</span><strong>{formatMoney(payroll?.totalDiscounts || 0)}</strong><small>{payroll?.totalAbsences || 0} saídas/faltas</small></article>
+              <article className="card stat-card"><span>Folha líquida</span><strong>{formatMoney(payroll?.totalNet || 0)}</strong><small>Após descontos</small></article>
+            </section>
+            <section className="card module-card">
+              <div className="section-heading">
+                <div>
+                  <h2>Pagamento dos funcionários</h2>
+                  <p className="module-subtitle">Cálculo sincronizado com os funcionários ativos e os registos de assiduidade.</p>
+                </div>
+                <label className="month-filter">Mês<input type="month" value={payrollMonth} onChange={(event) => setPayrollMonth(event.target.value)} /></label>
+              </div>
+              <table>
+                <thead><tr><th>Funcionário</th><th>Salário base</th><th>Bônus</th><th>Saídas/faltas</th><th>Desconto</th><th>A receber</th></tr></thead>
+                <tbody>
+                  {payroll?.rows.length ? payroll.rows.map((row) => (
+                    <tr key={row.employeeId}>
+                      <td><strong>{row.fullName}</strong><small className="table-secondary">{row.employeeCode} · {row.position || 'Sem posição'}</small></td>
+                      <td>{formatMoney(row.salary)}</td>
+                      <td>{formatMoney(row.bonus)}</td>
+                      <td>{row.absences}</td>
+                      <td>{formatMoney(row.discount)}</td>
+                      <td><strong>{formatMoney(row.netSalary)}</strong></td>
+                    </tr>
+                  )) : <tr><td colSpan={6}>Sem funcionários ativos ou registos para este mês.</td></tr>}
+                </tbody>
+              </table>
+            </section>
+          </>
         )
 
       case 'Clientes':
@@ -1127,8 +1175,8 @@ export default function App() {
               </article>
               <article className="card stat-card">
                 <span>Margem</span>
-                <strong>{financialReport ? formatMoney(Number((financialReport.totalRevenues || 0) - (financialReport.totalExpenses || 0))) : 'AOA 0,00'}</strong>
-                <small>Resultado líquido</small>
+                <strong>{financialReport ? formatMoney(Number(financialReport.profit ?? (financialReport.totalSales || 0) - (financialReport.totalExpenses || 0))) : 'AOA 0,00'}</strong>
+                <small>Vendas menos despesas</small>
               </article>
             </section>
 
@@ -1270,6 +1318,8 @@ export default function App() {
                 <label>Nome completo<input required value={formData.fullName || ''} onChange={(event) => setFormData({ ...formData, fullName: event.target.value })} /></label>
                 <label>Email<input type="email" value={formData.email || ''} onChange={(event) => setFormData({ ...formData, email: event.target.value })} /></label>
                 <label>Telefone<input value={formData.phone || ''} onChange={(event) => setFormData({ ...formData, phone: event.target.value })} /></label>
+                <label>Salário base<input type="number" min="0" step="0.01" value={formData.salary || ''} onChange={(event) => setFormData({ ...formData, salary: event.target.value })} /></label>
+                <label>Bônus salarial mensal<input type="number" min="0" step="0.01" value={formData.salaryBonus || '0'} onChange={(event) => setFormData({ ...formData, salaryBonus: event.target.value })} /></label>
                 <label>Departamento
                   <select value={formData.departmentId || ''} onChange={(event) => setFormData({ ...formData, departmentId: event.target.value })}>
                     <option value="">Sem departamento</option>

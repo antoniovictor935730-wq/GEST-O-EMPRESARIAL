@@ -10,6 +10,11 @@ export class EmployeesController {
     return this.employeesService.findAll(search)
   }
 
+  @Get('payroll/summary')
+  async payroll(@Query('month') month?: string) {
+    return this.employeesService.getPayroll(month)
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string) {
     return this.employeesService.findOne(id)

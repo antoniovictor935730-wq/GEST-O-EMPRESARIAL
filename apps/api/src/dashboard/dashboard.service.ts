@@ -44,9 +44,19 @@ export class DashboardService {
       where: { date: { gte: startOfYear } },
     })
 
-    const totalExpenses = await this.prisma.expense.aggregate({
-      _sum: { value: true },
-    })
+    const [totalExpenses, payrollEmployees] = await Promise.all([
+      this.prisma.expense.aggregate({ _sum: { value: true } }),
+      this.prisma.employee.findMany({
+        where: { status: 'ACTIVE' },
+        select: {
+          salary: true,
+          salaryBonus: true,
+          attendance: { where: { createdAt: { gte: startOfMonth, lt: new Date(now.getFullYear(), now.getMonth() + 1, 1) }, absence: true } },
+        },
+      }),
+    ])
+    const payrollGross = payrollEmployees.reduce((sum, employee) => sum + Number(employee.salary || 0) + Number(employee.salaryBonus || 0), 0)
+    const payrollDiscounts = payrollEmployees.reduce((sum, employee) => sum + (Number(employee.salary || 0) / 30) * employee.attendance.length, 0)
 
     return {
       period,
@@ -61,6 +71,10 @@ export class DashboardService {
         products: productsCount,
         lowStock,
         salesCount,
+        payrollGross,
+        payrollDiscounts,
+        payrollNet: Math.max(0, payrollGross - payrollDiscounts),
+        payrollAbsences: payrollEmployees.reduce((sum, employee) => sum + employee.attendance.length, 0),
       },
       recent: {
         sales: (await this.prisma.sale.findMany({
