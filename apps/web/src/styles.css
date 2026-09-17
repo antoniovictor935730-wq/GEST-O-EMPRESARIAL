@@ -1,21 +1,21 @@
 :root {
   font-family: "Avenir Next", "Trebuchet MS", sans-serif;
-  color: #e8f3f6;
-  background: #061b28;
+  color: #f4f7f8;
+  background: #031f2d;
   line-height: 1.5;
   font-weight: 400;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  --navy: #061b28;
+  --navy: #031f2d;
   --petrol: #075675;
-  --petrol-light: #0c7899;
-  --red: #ff1025;
-  --ink: #e8f3f6;
-  --muted: #9db6bf;
-  --line: rgba(157, 198, 210, 0.2);
-  --panel: rgba(7, 37, 53, 0.88);
+  --petrol-light: #0b7891;
+  --red: #ed1b2f;
+  --ink: #f4f7f8;
+  --muted: #a7bec6;
+  --line: rgba(144, 195, 207, 0.22);
+  --panel: rgba(5, 45, 61, 0.9);
 }
 
 * {
@@ -60,7 +60,7 @@ button {
   padding: 24px;
   border: 1px solid rgba(148, 163, 184, 0.24);
   border-radius: 12px;
-  background: linear-gradient(145deg, #0a3144, #062131);
+  background: linear-gradient(145deg, #084c65, #032b3d);
   box-shadow: 0 24px 80px rgba(0, 8, 14, 0.55);
   animation: modal-in 260ms cubic-bezier(.2,.8,.2,1) both;
 }
@@ -75,8 +75,8 @@ button {
   padding: 11px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  color: #e5eefb;
-  background: #061b28;
+  color: var(--ink);
+  background: #032b3d;
   transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
@@ -85,16 +85,16 @@ button {
   padding: 11px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  color: #e5eefb;
-  background: #061b28;
+  color: var(--ink);
+  background: #032b3d;
   transition: border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .modal-card input:focus,
 .modal-card select:focus {
   outline: none;
-  border-color: #2da6c9;
-  box-shadow: 0 0 0 3px rgba(45, 166, 201, 0.16);
+  border-color: #4db4c8;
+  box-shadow: 0 0 0 3px rgba(77, 180, 200, 0.16);
 }
 
 .row-actions {
@@ -121,7 +121,7 @@ button {
   min-height: 100vh;
   display: grid;
   place-items: center;
-  background: radial-gradient(circle at 15% 10%, rgba(12, 120, 153, 0.32), transparent 34%), linear-gradient(135deg, #061b28 0%, #03111b 65%, #061b28 100%);
+  background: radial-gradient(circle at 15% 10%, rgba(11, 120, 145, 0.32), transparent 34%), linear-gradient(135deg, #031f2d 0%, #02141e 65%, #031f2d 100%);
   padding: 24px;
 }
 
@@ -206,12 +206,12 @@ button {
 .app-shell {
   display: flex;
   min-height: 100vh;
-  background: radial-gradient(circle at 95% 0%, rgba(12, 120, 153, 0.15), transparent 28%), linear-gradient(180deg, #061b28 0%, #04131e 100%);
+  background: radial-gradient(circle at 95% 0%, rgba(11, 120, 145, 0.16), transparent 28%), linear-gradient(180deg, #031f2d 0%, #021720 100%);
 }
 
 .sidebar {
   width: 250px;
-  background: rgba(3, 24, 36, 0.95);
+  background: rgba(2, 29, 42, 0.97);
   border-right: 1px solid var(--line);
   padding: 24px 18px;
 }
@@ -226,6 +226,29 @@ button {
   display: block;
   width: 100%;
   height: auto;
+}
+
+.company-sidebar-info {
+  display: grid;
+  gap: 4px;
+  margin-top: 16px;
+  padding: 12px 10px 0;
+  border-top: 1px solid rgba(157, 198, 210, 0.14);
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.company-sidebar-info strong {
+  overflow: hidden;
+  color: #e8f3f6;
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.company-sidebar-info span {
+  overflow-wrap: anywhere;
 }
 
 .sidebar nav {
@@ -248,8 +271,8 @@ button {
 
 .nav-item:hover,
 .nav-item.active {
-  border-color: rgba(45, 166, 201, 0.55);
-  background: rgba(12, 120, 153, 0.18);
+  border-color: rgba(77, 180, 200, 0.58);
+  background: rgba(7, 86, 117, 0.32);
   transform: translateX(3px);
 }
 
@@ -443,7 +466,7 @@ button {
 }
 
 .stat-card span {
-  color: #93c5fd;
+  color: #9bd5df;
   font-size: 0.9rem;
 }
 
@@ -452,7 +475,7 @@ button {
 }
 
 .stat-card small {
-  color: #34d399;
+  color: #69c4cf;
 }
 
 .content-grid,
@@ -505,7 +528,7 @@ button {
 
 .chart-bars span {
   flex: 1;
-  background: linear-gradient(180deg, #38bdf8 0%, #2563eb 100%);
+  background: linear-gradient(180deg, #49b8c7 0%, #075675 100%);
   border-radius: 10px 10px 0 0;
   min-height: 24px;
 }
@@ -545,7 +568,7 @@ button {
 
 .cash-summary label {
   display: block;
-  color: #93c5fd;
+  color: #9bd5df;
   font-size: 0.8rem;
   margin-bottom: 8px;
 }

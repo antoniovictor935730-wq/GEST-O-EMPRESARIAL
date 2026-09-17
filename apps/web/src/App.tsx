@@ -1413,7 +1413,16 @@ export default function App() {
       ) : null}
 
       <aside className="sidebar">
-        <div className="brand"><img src="/logo.png" alt="HEL Technology Service" /></div>
+        <div className="brand">
+          <img src="/logo.png" alt="HEL Technology Service" />
+          <div className="company-sidebar-info">
+            <strong>{companySettings?.companyName || 'Empresa'}</strong>
+            {companySettings?.nif && <span>NIF {companySettings.nif}</span>}
+            {companySettings?.phone && <span>{companySettings.phone}</span>}
+            {companySettings?.email && <span>{companySettings.email}</span>}
+            {companySettings?.address && <span>{companySettings.address}</span>}
+          </div>
+        </div>
         <nav>
           {moduleConfig.map((module) => (
             <button
