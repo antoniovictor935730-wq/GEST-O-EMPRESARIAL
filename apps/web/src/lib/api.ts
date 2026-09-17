@@ -66,6 +66,8 @@ export type PayrollSummary = {
     absences: number
     discount: number
     netSalary: number
+    paidAmount: number
+    isPaid: boolean
   }>
   totalGross: number
   totalDiscounts: number
@@ -301,6 +303,14 @@ export async function getPayrollSummary(token: string, month: string): Promise<P
   const payload = await response.json().catch(() => ({}))
   if (!response.ok) throw new Error(payload.message || 'Erro ao carregar pagamentos.')
   return payload as PayrollSummary
+}
+
+export async function createEmployeeAttendance(token: string, data: Record<string, string>) {
+  return createResource(token, 'employees/attendance', data)
+}
+
+export async function createPayrollPayment(token: string, data: Record<string, string>) {
+  return createResource(token, 'employees/payroll/payment', data)
 }
 
 async function createResource<T>(token: string, path: string, data: unknown): Promise<T> {

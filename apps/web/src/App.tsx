@@ -13,6 +13,8 @@ import {
   createExpense,
   createClient,
   createEmployee,
+  createEmployeeAttendance,
+  createPayrollPayment,
   createProduct,
   createSale,
   createStockMovement,
@@ -124,7 +126,7 @@ export default function App() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isDownloadingReport, setIsDownloadingReport] = useState<ReportPeriod | null>(null)
   const [isLoadingDashboard, setIsLoadingDashboard] = useState(false)
-  const [activeForm, setActiveForm] = useState<'employee' | 'client' | 'product' | 'sale' | 'movement' | 'department' | 'position' | 'category' | 'supplier' | 'cashMovement' | 'cashClose' | 'expense' | 'settings' | null>(null)
+  const [activeForm, setActiveForm] = useState<'employee' | 'client' | 'product' | 'sale' | 'movement' | 'department' | 'position' | 'category' | 'supplier' | 'cashMovement' | 'cashClose' | 'expense' | 'settings' | 'attendance' | 'payrollPayment' | null>(null)
   const [formData, setFormData] = useState<Record<string, string>>({})
   const [editingId, setEditingId] = useState<string | null>(null)
 
@@ -427,7 +429,7 @@ export default function App() {
     }
   }
 
-  const openForm = (form: 'employee' | 'client' | 'product' | 'sale' | 'movement' | 'department' | 'position' | 'category' | 'supplier' | 'cashMovement' | 'cashClose' | 'expense' | 'settings', record?: Record<string, unknown>) => {
+  const openForm = (form: 'employee' | 'client' | 'product' | 'sale' | 'movement' | 'department' | 'position' | 'category' | 'supplier' | 'cashMovement' | 'cashClose' | 'expense' | 'settings' | 'attendance' | 'payrollPayment', record?: Record<string, unknown>) => {
     setError('')
     setFormData(record ? Object.fromEntries(Object.entries(record).map(([key, value]) => [key, String(value ?? '')])) : {})
     setEditingId(record?.id ? String(record.id) : null)
@@ -450,6 +452,12 @@ export default function App() {
         if (editingId) await updateResource(session!.accessToken, `employees/${editingId}`, formData)
         else await createEmployee(session!.accessToken, formData)
         setEmployees(await getEmployees(session!.accessToken))
+      } else if (activeForm === 'attendance') {
+        await createEmployeeAttendance(session!.accessToken, formData)
+        setPayroll(await getPayrollSummary(session!.accessToken, payrollMonth))
+      } else if (activeForm === 'payrollPayment') {
+        await createPayrollPayment(session!.accessToken, formData)
+        setPayroll(await getPayrollSummary(session!.accessToken, payrollMonth))
       } else if (activeForm === 'department') {
         if (editingId) await updateResource(session!.accessToken, `departments/${editingId}`, formData)
         else await createDepartment(session!.accessToken, formData)
@@ -708,10 +716,13 @@ export default function App() {
                   <h2>Pagamento dos funcionários</h2>
                   <p className="module-subtitle">Cálculo sincronizado com os funcionários ativos e os registos de assiduidade.</p>
                 </div>
-                <label className="month-filter">Mês<input type="month" value={payrollMonth} onChange={(event) => setPayrollMonth(event.target.value)} /></label>
+                <div className="payroll-actions">
+                  <label className="month-filter">Mês<input type="month" value={payrollMonth} onChange={(event) => setPayrollMonth(event.target.value)} /></label>
+                  <button type="button" className="secondary-btn" onClick={() => openForm('attendance')}>Registrar saída</button>
+                </div>
               </div>
               <table>
-                <thead><tr><th>Funcionário</th><th>Salário base</th><th>Bônus</th><th>Saídas/faltas</th><th>Desconto</th><th>A receber</th></tr></thead>
+                <thead><tr><th>Funcionário</th><th>Salário base</th><th>Bônus</th><th>Saídas/faltas</th><th>Desconto</th><th>A receber</th><th>Pagamento</th></tr></thead>
                 <tbody>
                   {payroll?.rows.length ? payroll.rows.map((row) => (
                     <tr key={row.employeeId}>
@@ -721,8 +732,9 @@ export default function App() {
                       <td>{row.absences}</td>
                       <td>{formatMoney(row.discount)}</td>
                       <td><strong>{formatMoney(row.netSalary)}</strong></td>
+                      <td className="row-actions"><span className={row.isPaid ? 'badge success' : 'badge warning'}>{row.isPaid ? 'Pago' : 'Pendente'}</span>{!row.isPaid && <button type="button" onClick={() => openForm('payrollPayment', { employeeId: row.employeeId, month: payrollMonth, amount: String(row.netSalary) })}>Pagar</button>}</td>
                     </tr>
-                  )) : <tr><td colSpan={6}>Sem funcionários ativos ou registos para este mês.</td></tr>}
+                  )) : <tr><td colSpan={7}>Sem funcionários ativos ou registos para este mês.</td></tr>}
                 </tbody>
               </table>
             </section>
@@ -1308,7 +1320,7 @@ export default function App() {
         <div className="modal-backdrop" role="presentation">
           <form className="modal-card" onSubmit={handleCreate}>
             <div className="section-heading">
-              <h2>{activeForm === 'employee' ? 'Novo funcionário' : activeForm === 'client' ? 'Novo cliente' : activeForm === 'product' ? 'Adicionar produto' : activeForm === 'department' ? 'Novo departamento' : activeForm === 'position' ? 'Nova posição' : activeForm === 'category' ? 'Nova categoria' : activeForm === 'supplier' ? 'Novo fornecedor' : activeForm === 'cashMovement' ? 'Novo movimento de caixa' : activeForm === 'cashClose' ? 'Fechar dia' : activeForm === 'expense' ? 'Nova despesa' : activeForm === 'settings' ? 'Configurações da empresa' : activeForm === 'sale' ? 'Nova venda' : 'Nova movimentação'}</h2>
+              <h2>{activeForm === 'employee' ? 'Novo funcionário' : activeForm === 'client' ? 'Novo cliente' : activeForm === 'product' ? 'Adicionar produto' : activeForm === 'department' ? 'Novo departamento' : activeForm === 'position' ? 'Nova posição' : activeForm === 'category' ? 'Nova categoria' : activeForm === 'supplier' ? 'Novo fornecedor' : activeForm === 'cashMovement' ? 'Novo movimento de caixa' : activeForm === 'cashClose' ? 'Fechar dia' : activeForm === 'expense' ? 'Nova despesa' : activeForm === 'settings' ? 'Configurações da empresa' : activeForm === 'sale' ? 'Nova venda' : activeForm === 'attendance' ? 'Registrar saída/falta' : activeForm === 'payrollPayment' ? 'Registrar pagamento' : 'Nova movimentação'}</h2>
               <button type="button" className="icon-btn" onClick={closeForm} aria-label="Fechar formulário">×</button>
             </div>
 
@@ -1332,6 +1344,22 @@ export default function App() {
                     {positions.map((position) => <option key={position.id} value={position.id}>{position.name}</option>)}
                   </select>
                 </label>
+              </>
+            ) : null}
+
+            {activeForm === 'attendance' ? (
+              <>
+                <label>Funcionário<select required value={formData.employeeId || ''} onChange={(event) => setFormData({ ...formData, employeeId: event.target.value })}><option value="">Selecione</option>{employees.filter((employee) => employee.status === 'ACTIVE').map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName}</option>)}</select></label>
+                <label>Data da saída<input required type="datetime-local" value={formData.checkOut || ''} onChange={(event) => setFormData({ ...formData, checkOut: event.target.value })} /></label>
+                <label className="checkbox-field"><input type="checkbox" checked={formData.absence === 'true'} onChange={(event) => setFormData({ ...formData, absence: String(event.target.checked) })} /> Considerar como falta para desconto</label>
+              </>
+            ) : null}
+
+            {activeForm === 'payrollPayment' ? (
+              <>
+                <label>Mês<input required type="month" value={formData.month || payrollMonth} onChange={(event) => setFormData({ ...formData, month: event.target.value })} /></label>
+                <label>Valor pago<input required type="number" min="0" step="0.01" value={formData.amount || ''} onChange={(event) => setFormData({ ...formData, amount: event.target.value })} /></label>
+                <label>Observação<input value={formData.notes || ''} onChange={(event) => setFormData({ ...formData, notes: event.target.value })} /></label>
               </>
             ) : null}
 

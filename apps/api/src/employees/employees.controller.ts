@@ -34,4 +34,14 @@ export class EmployeesController {
   async remove(@Param('id') id: string) {
     return this.employeesService.remove(id)
   }
+
+  @Post('attendance')
+  async attendance(@Body() dto: any) {
+    return this.employeesService.createAttendance(dto)
+  }
+
+  @Post('payroll/payment')
+  async payment(@Body() dto: any) {
+    return this.employeesService.createPayrollPayment(dto)
+  }
 }

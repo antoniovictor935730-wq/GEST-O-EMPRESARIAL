@@ -43,7 +43,7 @@ export class EmployeesService {
     const endDate = new Date(year, monthNumber, 1)
     const employees = await this.prisma.employee.findMany({
       where: { status: 'ACTIVE' },
-      include: { attendance: { where: { createdAt: { gte: startDate, lt: endDate } } }, department: true, position: true },
+      include: { attendance: { where: { createdAt: { gte: startDate, lt: endDate } } }, payrollPayments: { where: { month: selectedMonth } }, department: true, position: true },
       orderBy: { fullName: 'asc' },
     })
     const rows = employees.map((employee) => {
@@ -51,7 +51,9 @@ export class EmployeesService {
       const bonus = Number(employee.salaryBonus || 0)
       const absences = employee.attendance.filter((record) => record.absence).length
       const discount = (salary / 30) * absences
-      return { employeeId: employee.id, employeeCode: employee.employeeCode, fullName: employee.fullName, department: employee.department?.name || null, position: employee.position?.name || null, salary, bonus, absences, discount, netSalary: Math.max(0, salary + bonus - discount) }
+      const netSalary = Math.max(0, salary + bonus - discount)
+      const paidAmount = employee.payrollPayments.reduce((sum, payment) => sum + Number(payment.amount), 0)
+      return { employeeId: employee.id, employeeCode: employee.employeeCode, fullName: employee.fullName, department: employee.department?.name || null, position: employee.position?.name || null, salary, bonus, absences, discount, netSalary, paidAmount, isPaid: paidAmount >= netSalary }
     })
     return {
       month: selectedMonth,
@@ -61,6 +63,29 @@ export class EmployeesService {
       totalNet: rows.reduce((sum, row) => sum + row.netSalary, 0),
       totalAbsences: rows.reduce((sum, row) => sum + row.absences, 0),
     }
+  }
+
+  async createAttendance(data: any) {
+    return this.prisma.attendance.create({
+      data: {
+        employeeId: data.employeeId,
+        absence: data.absence === true || data.absence === 'true',
+        checkOut: data.checkOut ? new Date(data.checkOut) : new Date(),
+        checkIn: data.checkIn ? new Date(data.checkIn) : null,
+        lateMinutes: Number(data.lateMinutes || 0),
+      },
+    })
+  }
+
+  async createPayrollPayment(data: any) {
+    return this.prisma.payrollPayment.create({
+      data: {
+        employeeId: data.employeeId,
+        month: data.month,
+        amount: Number(data.amount),
+        notes: data.notes,
+      },
+    })
   }
 
   async create(data: any) {
